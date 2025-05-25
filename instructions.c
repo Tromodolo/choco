@@ -4,8 +4,7 @@
 
 #include "nes-internal.h"
 #include "instructions.h"
-
-#include <stdint.h>
+#include "instructions-internal.h"
 
 #include "cartridge.h"
 #include "nes.h"
@@ -18,27 +17,11 @@ case opcode: {\
     break; \
 } \
 
-enum AddressingMode {
-    Addressing_Immediate,
-    Addressing_ZeroPage,
-    Addressing_ZeroPageX,
-    Addressing_ZeroPageY,
-    Addressing_Accumulator,
-    Addressing_Absolute,
-    Addressing_AbsoluteX,
-    Addressing_AbsoluteY,
-    Addressing_Indirect,
-    Addressing_IndirectX,
-    Addressing_IndirectY,
-    Addressing_Relative,
-    Addressing_NoneAddressing,
-};
-
-static inline bool is_page_cross(unsigned short base, unsigned short addr) {
+inline bool is_page_cross(unsigned short base, unsigned short addr) {
     return base & 0xFF00 != addr & 0xFF00;
 }
 
-static inline unsigned char* get_address(struct Nes* nes, struct CPU* cpu, enum AddressingMode mode) {
+inline unsigned char* get_address(struct Nes* nes, struct CPU* cpu, enum AddressingMode mode) {
     switch (mode) {
         case Addressing_NoneAddressing:
             return nullptr;
@@ -118,307 +101,307 @@ static inline unsigned char* get_address(struct Nes* nes, struct CPU* cpu, enum 
     }
 }
 
-static inline void brk(struct Nes* nes, struct CPU* cpu, unsigned char* addr) {
+inline void brk(struct Nes* nes, struct CPU* cpu, unsigned char* addr) {
     cpu->is_stopped = true;
 }
 
-static inline void ora(struct Nes* nes, struct CPU* cpu, const unsigned char* addr){
+inline void ora(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
     cpu->acc |= *addr;
 }
 
-static inline void kil(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void kil(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
     cpu->is_stopped = true;
 }
 
-static inline void slo(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void slo(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void asl(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void asl(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void php(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void php(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void aac(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void aac(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void bpl(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void bpl(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void clc(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void clc(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void jsr(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void jsr(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void and(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void and(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void rla(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void rla(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void bit(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void bit(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void rol(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void rol(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void plp(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void plp(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void bmi(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void bmi(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void sec(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void sec(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void rti(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void rti(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void eor(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void eor(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void sre(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void sre(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void lsr(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void lsr(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void pha(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void pha(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void asr(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void asr(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void jmp(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void jmp(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void bvc(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void bvc(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void cli(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void cli(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void rts(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void rts(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void adc(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void adc(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void rra(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void rra(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void ror(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void ror(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void pla(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void pla(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void arr(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void arr(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void bvs(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void bvs(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void sei(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void sei(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void sta(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void sta(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void sax(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void sax(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void sty(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void sty(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void stx(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void stx(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void dey(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void dey(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void txa(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void txa(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void xaa(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void xaa(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void bcc(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void bcc(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void axa(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void axa(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void tya(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void tya(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void txs(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void txs(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void xas(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void xas(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void sya(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void sya(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void sxa(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void sxa(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void ldy(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void ldy(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void lda(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void lda(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void ldx(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void ldx(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void lax(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void lax(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void tay(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void tay(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void tax(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void tax(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void atx(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void atx(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void bcs(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void bcs(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void clv(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void clv(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void tsx(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void tsx(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void lar(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void lar(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void cpy(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void cpy(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void cmp(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void cmp(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void dcp(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void dcp(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void dec(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void dec(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void iny(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void iny(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void dex(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void dex(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void axs(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void axs(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void bne(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void bne(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void cld(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void cld(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void cpx(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void cpx(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void sbc(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void sbc(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void isb(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void isb(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void inc(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void inc(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void inx(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void inx(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void nop(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void nop(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void beq(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void beq(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 
-static inline void sed(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void sed(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 
 }
 

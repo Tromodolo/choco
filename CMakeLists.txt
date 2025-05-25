@@ -12,6 +12,7 @@ add_executable(choco
         cartridge.c
         cpu.c
         instructions.c
-        tests/tests.c)
+        tests/tests.c
+        tests/cpu-addressing.c)
 
 target_link_libraries(choco raylib)
