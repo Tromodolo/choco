@@ -25,7 +25,7 @@ inline struct Core* get_core_for_file(char* file_path) {
 
 void core_audio_callback(struct Core* core, void *buffer_data, unsigned int frames) {
     bool is_new_frame = false;
-    nes_get_samples(buffer_data, frames, core->frame_buffer, &is_new_frame);
+    nes_get_samples(buffer_data, frames, core->emu, core->frame_buffer, &is_new_frame);
 
     if (is_new_frame) {
         core->frame_buffer_changed = true;

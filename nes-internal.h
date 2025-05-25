@@ -67,6 +67,10 @@ struct CPU {
     unsigned char y;
     unsigned short pc;
     unsigned char sp;
+    unsigned char waiting_cycles;
+
+    bool is_stopped;
+
     Flags p;
 };
 

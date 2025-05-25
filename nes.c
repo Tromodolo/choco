@@ -18,14 +18,18 @@ struct Nes* nes_init(char* file_path) {
     return nes;
 }
 
-inline void nes_get_samples(void* buffer_data, unsigned int frames, Color* frame_buffer, bool* is_new_frame){
-
+inline void nes_get_samples(void* buffer_data, unsigned int frames, struct Nes* nes, Color* frame_buffer, bool* is_new_frame){
+    nes_cpu_tick(nes);
 }
 
 void nes_free(struct Nes* nes) {
     nes_cartridge_free(nes->cartridge);
     nes_cpu_free(nes->cpu);
     free(nes);
+}
+
+unsigned char* nes_get_addr_ptr(struct Nes* nes, unsigned short addr) {
+    return nes_cartridge_get_addr_ptr(nes->cartridge, addr);
 }
 
 inline unsigned char nes_read_char(struct Nes* nes, unsigned short addr) {

@@ -10,11 +10,8 @@ add_executable(choco
         nes.c
         core.c
         cartridge.c
-        cartridge.h
         cpu.c
-        cpu.h
-        tests/tests.c
-        tests/tests.h
-        nestypes.h)
+        instructions.c
+        tests/tests.c)
 
 target_link_libraries(choco raylib)

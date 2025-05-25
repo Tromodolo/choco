@@ -141,6 +141,16 @@ const unsigned short PRG_ROM_END = 0xFFFF;
 const unsigned short RAM_MIRRORS_END = 0x1fff;
 const unsigned short PPU_MIRRORS_END = 0x3fff;
 
+inline unsigned char* nes_cartridge_get_addr_ptr(const struct Cartridge* cartridge, unsigned short addr) {
+    if (addr >= PRG_ROM_START && addr <= PRG_ROM_END) {
+        addr -= PRG_ROM_START;
+        addr %= cartridge->prg_rom_size;
+        return &cartridge->prg_rom[addr];
+    }
+
+    return nullptr;
+}
+
 inline unsigned char nes_cartridge_read_char(const struct Cartridge* cartridge, unsigned short addr) {
     if (addr >= PRG_ROM_START && addr <= PRG_ROM_END) {
         addr -= PRG_ROM_START;
