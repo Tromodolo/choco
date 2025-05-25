@@ -1,0 +1,10 @@
+//
+// Created by tromo on 5/25/25.
+//
+
+#ifndef TESTS_H
+#define TESTS_H
+
+void run_tests();
+
+#endif //TESTS_H

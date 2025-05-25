@@ -1,0 +1,42 @@
+//
+// Created by tromo on 5/24/25.
+//
+
+#include <stdlib.h>
+
+#include "core.h"
+#include "nes.h"
+
+inline struct Core* get_core_for_file(char* file_path) {
+    struct Core* core = malloc(sizeof(struct Core));
+
+    core->emu = nes_init(file_path);
+    core->buffer_height = 240;
+    core->buffer_width = 256;
+    core->frame_buffer = malloc(core->buffer_width * core->buffer_height * sizeof(Color));
+    core->frame_buffer_changed = true;
+
+    for (int i = 0; i < core->buffer_width * core->buffer_height; i++) {
+        core->frame_buffer[i] = DARKBLUE;
+    }
+
+    return core;
+}
+
+void core_audio_callback(struct Core* core, void *buffer_data, unsigned int frames) {
+    bool is_new_frame = false;
+    nes_get_samples(buffer_data, frames, core->frame_buffer, &is_new_frame);
+
+    if (is_new_frame) {
+        core->frame_buffer_changed = true;
+    }
+}
+
+inline void core_clear_frame_buffer_changed(struct Core* core) {
+    core->frame_buffer_changed = false;
+}
+
+void core_free(struct Core* core) {
+    nes_free(core->emu);
+    free(core);
+}
