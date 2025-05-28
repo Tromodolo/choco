@@ -25,7 +25,7 @@ enum AddressingMode {
 };
 
 void set_zero_and_negative(struct Nes* nes, struct CPU* cpu, uint8_t value);
-bool is_page_cross(unsigned short base, unsigned short addr);
+bool is_page_cross(uint16_t base, uint16_t addr);
 uint8_t* get_address(struct Nes* nes, struct CPU* cpu, enum AddressingMode mode);
 
 void brk(struct Nes* nes, struct CPU* cpu, uint8_t* addr);

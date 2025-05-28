@@ -37,23 +37,23 @@ void nes_free(struct Nes* nes) {
     free(nes);
 }
 
-uint8_t* nes_get_addr_ptr(struct Nes* nes, unsigned short addr) {
+uint8_t* nes_get_addr_ptr(struct Nes* nes, uint16_t addr) {
     return nes_cartridge_get_addr_ptr(nes->cartridge, addr);
 }
 
-inline uint8_t nes_read_char(struct Nes* nes, unsigned short addr) {
+inline uint8_t nes_read_char(struct Nes* nes, uint16_t addr) {
     return nes_cartridge_read_char(nes->cartridge, addr);
 }
-inline void nes_write_char(struct Nes* nes, unsigned short addr, uint8_t val) {
+inline void nes_write_char(struct Nes* nes, uint16_t addr, uint8_t val) {
     return nes_cartridge_write_char(nes->cartridge, addr, val);
 }
 
-inline unsigned short nes_read_short(struct Nes* nes, unsigned short addr) {
+inline uint16_t nes_read_short(struct Nes* nes, uint16_t addr) {
     uint8_t lo = nes_cartridge_read_char(nes->cartridge, addr);
     uint8_t hi = nes_cartridge_read_char(nes->cartridge, ++addr);
     return hi << 8 | lo;
 }
-inline void nes_write_short(struct Nes* nes, unsigned short addr, unsigned short val) {
+inline void nes_write_short(struct Nes* nes, uint16_t addr, uint16_t val) {
     uint8_t lo = val & 0xFF;
     uint8_t hi = val >> 8;
     nes_cartridge_write_char(nes->cartridge, addr, lo);

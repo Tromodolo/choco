@@ -30,7 +30,7 @@ void set_higher_carry(struct Nes* nes, struct CPU* cpu, uint8_t value) {
     cpu->p.flags.carry = (value & 0x80) == 0x80;
 }
 
-bool is_page_cross(unsigned short base, unsigned short addr) {
+bool is_page_cross(uint16_t base, uint16_t addr) {
     return base & 0xFF00 != addr & 0xFF00;
 }
 
@@ -57,8 +57,8 @@ inline uint8_t* get_address(struct Nes* nes, struct CPU* cpu, enum AddressingMod
             return nes_get_addr_ptr(nes, nes_read_short(nes, cpu->pc));
         case Addressing_AbsoluteX:
         {
-            const unsigned short base = nes_read_short(nes, cpu->pc);
-            const unsigned short addr = base + cpu->x;
+            const uint16_t base = nes_read_short(nes, cpu->pc);
+            const uint16_t addr = base + cpu->x;
 
             if (is_page_cross(base, addr))
                 cpu->waiting_cycles++;
@@ -67,8 +67,8 @@ inline uint8_t* get_address(struct Nes* nes, struct CPU* cpu, enum AddressingMod
         }
         case Addressing_AbsoluteY:
         {
-            const unsigned short base = nes_read_short(nes, cpu->pc);
-            const unsigned short addr = base + cpu->x;
+            const uint16_t base = nes_read_short(nes, cpu->pc);
+            const uint16_t addr = base + cpu->x;
 
             if (is_page_cross(base, addr))
                 cpu->waiting_cycles++;
@@ -77,7 +77,7 @@ inline uint8_t* get_address(struct Nes* nes, struct CPU* cpu, enum AddressingMod
         }
         case Addressing_Indirect:
         {
-            const unsigned short addr = nes_read_short(nes, cpu->pc);
+            const uint16_t addr = nes_read_short(nes, cpu->pc);
             // 6502 bug mode with page boundary:
             //  if address $3000 contains $40, $30FF contains $80, and $3100 contains $50,
             // the result of JMP ($30FF) will be a transfer of control to $4080 rather than $5080 as you intended
@@ -104,7 +104,7 @@ inline uint8_t* get_address(struct Nes* nes, struct CPU* cpu, enum AddressingMod
             const uint8_t lo = nes_read_char(nes, baseAddr);
             const uint8_t hi = nes_read_char(nes, baseAddr + 1);
             const unsigned derefBase = (hi << 8 | lo);
-            const unsigned short deref = derefBase + cpu->y;
+            const uint16_t deref = derefBase + cpu->y;
 
             if (is_page_cross(deref, derefBase))
                 cpu->waiting_cycles++;

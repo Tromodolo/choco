@@ -136,12 +136,12 @@ void nes_cartridge_free(struct Cartridge* cartridge) {
     free(cartridge);
 }
 
-const unsigned short PRG_ROM_START = 0x8000;
-const unsigned short PRG_ROM_END = 0xFFFF;
-const unsigned short RAM_MIRRORS_END = 0x1fff;
-const unsigned short PPU_MIRRORS_END = 0x3fff;
+const uint16_t PRG_ROM_START = 0x8000;
+const uint16_t PRG_ROM_END = 0xFFFF;
+const uint16_t RAM_MIRRORS_END = 0x1fff;
+const uint16_t PPU_MIRRORS_END = 0x3fff;
 
-inline uint8_t* nes_cartridge_get_addr_ptr(const struct Cartridge* cartridge, unsigned short addr) {
+inline uint8_t* nes_cartridge_get_addr_ptr(const struct Cartridge* cartridge, uint16_t addr) {
     if (addr >= PRG_ROM_START && addr <= PRG_ROM_END) {
         addr -= PRG_ROM_START;
         addr %= cartridge->prg_rom_size;
@@ -151,7 +151,7 @@ inline uint8_t* nes_cartridge_get_addr_ptr(const struct Cartridge* cartridge, un
     return nullptr;
 }
 
-inline uint8_t nes_cartridge_read_char(const struct Cartridge* cartridge, unsigned short addr) {
+inline uint8_t nes_cartridge_read_char(const struct Cartridge* cartridge, uint16_t addr) {
     if (addr >= PRG_ROM_START && addr <= PRG_ROM_END) {
         addr -= PRG_ROM_START;
         addr %= cartridge->prg_rom_size;
@@ -160,7 +160,7 @@ inline uint8_t nes_cartridge_read_char(const struct Cartridge* cartridge, unsign
 
     return 0;
 }
-inline void nes_cartridge_write_char(const struct Cartridge* cartridge, unsigned short addr, uint8_t val) {
+inline void nes_cartridge_write_char(const struct Cartridge* cartridge, uint16_t addr, uint8_t val) {
     if (addr >= PRG_ROM_START && addr <= PRG_ROM_END) {
         addr -= PRG_ROM_START;
         addr %= cartridge->prg_rom_size;

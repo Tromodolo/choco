@@ -66,7 +66,7 @@ struct CPU {
     uint8_t acc;
     uint8_t x;
     uint8_t y;
-    unsigned short pc;
+    uint16_t pc;
     uint8_t sp;
     uint8_t waiting_cycles;
 
