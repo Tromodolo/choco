@@ -5,16 +5,17 @@
 #ifndef NES_H
 #define NES_H
 #include <raylib.h>
+#include <stdint.h>
 
 struct Nes* nes_init(char* file_path);
-struct Nes* nes_init_from_buffer(const unsigned char* buffer, const long size);
+struct Nes* nes_init_from_buffer(const uint8_t* buffer, const long size);
 void nes_get_samples(void* buffer_data, unsigned int frames, struct Nes* nes, Color* frame_buffer, bool* is_new_frame);
 void nes_free(struct Nes* nes);
 
-unsigned char* nes_get_addr_ptr(struct Nes* nes, unsigned short addr);
+uint8_t* nes_get_addr_ptr(struct Nes* nes, unsigned short addr);
 
-unsigned char nes_read_char(struct Nes* nes, unsigned short addr);
-void nes_write_char(struct Nes* nes, unsigned short addr, unsigned char val);
+uint8_t nes_read_char(struct Nes* nes, unsigned short addr);
+void nes_write_char(struct Nes* nes, unsigned short addr, uint8_t val);
 
 unsigned short nes_read_short(struct Nes* nes, unsigned short addr);
 void nes_write_short(struct Nes* nes, unsigned short addr, unsigned short val);

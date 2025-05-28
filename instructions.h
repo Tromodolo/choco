@@ -4,7 +4,8 @@
 
 #ifndef INSTRUCTIONS_H
 #define INSTRUCTIONS_H
+#include <stdint.h>
 
-void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, unsigned char opcode);
+void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, uint8_t opcode);
 
 #endif //INSTRUCTIONS_H

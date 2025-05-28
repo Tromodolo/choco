@@ -3,9 +3,9 @@
 //
 
 #include <stdlib.h>
+#include <stdint.h>
 
 #include "cpu.h"
-
 #include "instructions.h"
 #include "nes.h"
 #include "nes-internal.h"
@@ -31,7 +31,7 @@ struct CPU* nes_cpu_init(struct Nes* nes) {
 
 void nes_cpu_tick(struct Nes* nes) {
     if (!nes->cpu->is_stopped && nes->cpu->waiting_cycles == 0) {
-        const unsigned char opcode = nes_read_char(nes, nes->cpu->pc++);
+        const uint8_t opcode = nes_read_char(nes, nes->cpu->pc++);
         nes_cpu_handle_instruction(nes, nes->cpu, opcode);
     }
     nes->cpu->waiting_cycles--;

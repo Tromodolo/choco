@@ -4,6 +4,7 @@
 
 #ifndef NESTYPES_H
 #define NESTYPES_H
+#include <stdint.h>
 
 struct Cartridge;
 struct CPU;
@@ -35,9 +36,9 @@ struct Cartridge {
     int prg_rom_size;
     int chr_rom_size;
     int prg_ram_size;
-    unsigned char* prg_rom;
-    unsigned char* chr_rom;
-    unsigned char* prg_ram;
+    uint8_t* prg_rom;
+    uint8_t* chr_rom;
+    uint8_t* prg_ram;
     enum Mapper mapper;
     enum Mirroring mirroring;
 };
@@ -49,25 +50,25 @@ typedef union
 {
     struct
     {
-        unsigned char carry : 1;
-        unsigned char zero : 1;
-        unsigned char interrupt_disable : 1;
-        unsigned char decimal : 1;
-        unsigned char _unused_1 : 1;
-        unsigned char _unused_2 : 1;
-        unsigned char overflow : 1;
-        unsigned char negative : 1;
+        uint8_t carry : 1;
+        uint8_t zero : 1;
+        uint8_t interrupt_disable : 1;
+        uint8_t decimal : 1;
+        uint8_t _unused_1 : 1;
+        uint8_t _unused_2 : 1;
+        uint8_t overflow : 1;
+        uint8_t negative : 1;
     } flags;
-    unsigned char value;
+    uint8_t value;
 } Flags;
 
 struct CPU {
-    unsigned char acc;
-    unsigned char x;
-    unsigned char y;
+    uint8_t acc;
+    uint8_t x;
+    uint8_t y;
     unsigned short pc;
-    unsigned char sp;
-    unsigned char waiting_cycles;
+    uint8_t sp;
+    uint8_t waiting_cycles;
 
     bool is_stopped;
 

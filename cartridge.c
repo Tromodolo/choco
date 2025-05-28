@@ -57,7 +57,7 @@ struct Cartridge* nes_cartridge_load_from_file(const char* file_path) {
     return cartridge;
 }
 
-struct Cartridge* nes_cartridge_load_from_buffer(const unsigned char* buffer, const long size) {
+struct Cartridge* nes_cartridge_load_from_buffer(const uint8_t* buffer, const long size) {
     struct Cartridge* cartridge = malloc(sizeof(struct Cartridge));
     if (!(buffer[NES_TAG_1] == 'N' &&
           buffer[NES_TAG_2] == 'E' &&
@@ -111,19 +111,19 @@ struct Cartridge* nes_cartridge_load_from_buffer(const unsigned char* buffer, co
     cartridge->prg_ram_size = prg_ram_size;
     cartridge->chr_rom_size = chr_rom_size;
 
-    cartridge->prg_rom = malloc(sizeof(unsigned char) * prg_rom_size);
-    cartridge->prg_ram = malloc(sizeof(unsigned char) * prg_ram_size);
-    cartridge->chr_rom = malloc(sizeof(unsigned char) * chr_rom_size);
+    cartridge->prg_rom = malloc(sizeof(uint8_t) * prg_rom_size);
+    cartridge->prg_ram = malloc(sizeof(uint8_t) * prg_ram_size);
+    cartridge->chr_rom = malloc(sizeof(uint8_t) * chr_rom_size);
 
     int prg_rom_start = HEADER_SIZE;
     if (skip_trainer)
         prg_rom_start += TRAINER_SIZE;
 
-    memcpy(cartridge->prg_rom, &buffer[prg_rom_start], prg_rom_size * sizeof(unsigned char));
+    memcpy(cartridge->prg_rom, &buffer[prg_rom_start], prg_rom_size * sizeof(uint8_t));
 
     if (!uses_chr_ram) {
         const int chr_rom_start = prg_rom_start + prg_rom_size;
-        memcpy(cartridge->chr_rom, &buffer[chr_rom_start], chr_rom_size * sizeof(unsigned char));
+        memcpy(cartridge->chr_rom, &buffer[chr_rom_start], chr_rom_size * sizeof(uint8_t));
     }
 
     return cartridge;
@@ -141,7 +141,7 @@ const unsigned short PRG_ROM_END = 0xFFFF;
 const unsigned short RAM_MIRRORS_END = 0x1fff;
 const unsigned short PPU_MIRRORS_END = 0x3fff;
 
-inline unsigned char* nes_cartridge_get_addr_ptr(const struct Cartridge* cartridge, unsigned short addr) {
+inline uint8_t* nes_cartridge_get_addr_ptr(const struct Cartridge* cartridge, unsigned short addr) {
     if (addr >= PRG_ROM_START && addr <= PRG_ROM_END) {
         addr -= PRG_ROM_START;
         addr %= cartridge->prg_rom_size;
@@ -151,7 +151,7 @@ inline unsigned char* nes_cartridge_get_addr_ptr(const struct Cartridge* cartrid
     return nullptr;
 }
 
-inline unsigned char nes_cartridge_read_char(const struct Cartridge* cartridge, unsigned short addr) {
+inline uint8_t nes_cartridge_read_char(const struct Cartridge* cartridge, unsigned short addr) {
     if (addr >= PRG_ROM_START && addr <= PRG_ROM_END) {
         addr -= PRG_ROM_START;
         addr %= cartridge->prg_rom_size;
@@ -160,7 +160,7 @@ inline unsigned char nes_cartridge_read_char(const struct Cartridge* cartridge, 
 
     return 0;
 }
-inline void nes_cartridge_write_char(const struct Cartridge* cartridge, unsigned short addr, unsigned char val) {
+inline void nes_cartridge_write_char(const struct Cartridge* cartridge, unsigned short addr, uint8_t val) {
     if (addr >= PRG_ROM_START && addr <= PRG_ROM_END) {
         addr -= PRG_ROM_START;
         addr %= cartridge->prg_rom_size;

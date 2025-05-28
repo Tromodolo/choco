@@ -17,16 +17,16 @@ case opcode: {\
     break; \
 } \
 
-void set_zero_and_negative(struct Nes* nes, struct CPU* cpu, unsigned char value) {
+void set_zero_and_negative(struct Nes* nes, struct CPU* cpu, uint8_t value) {
     cpu->p.flags.zero = value == 0;
     cpu->p.flags.negative = (value & 0x80) == 0x80;
 }
 
-void set_lower_carry(struct Nes* nes, struct CPU* cpu, unsigned char value) {
+void set_lower_carry(struct Nes* nes, struct CPU* cpu, uint8_t value) {
     cpu->p.flags.carry = (value & 0x01) == 0x01;
 }
 
-void set_higher_carry(struct Nes* nes, struct CPU* cpu, unsigned char value) {
+void set_higher_carry(struct Nes* nes, struct CPU* cpu, uint8_t value) {
     cpu->p.flags.carry = (value & 0x80) == 0x80;
 }
 
@@ -34,7 +34,7 @@ bool is_page_cross(unsigned short base, unsigned short addr) {
     return base & 0xFF00 != addr & 0xFF00;
 }
 
-inline unsigned char* get_address(struct Nes* nes, struct CPU* cpu, enum AddressingMode mode) {
+inline uint8_t* get_address(struct Nes* nes, struct CPU* cpu, enum AddressingMode mode) {
     switch (mode) {
         case Addressing_NoneAddressing:
             return nullptr;
@@ -44,7 +44,7 @@ inline unsigned char* get_address(struct Nes* nes, struct CPU* cpu, enum Address
             return &cpu->acc;
         case Addressing_Relative:
         {
-            const unsigned char jump = nes_read_char(nes, cpu->pc++);
+            const uint8_t jump = nes_read_char(nes, cpu->pc++);
             return nes_get_addr_ptr(nes, cpu->pc + jump);
         }
         case Addressing_ZeroPage:
@@ -83,8 +83,8 @@ inline unsigned char* get_address(struct Nes* nes, struct CPU* cpu, enum Address
             // the result of JMP ($30FF) will be a transfer of control to $4080 rather than $5080 as you intended
             // i.e. the 6502 took the low byte of the address from $30FF and the high byte from $3000
             if ((addr & 0xFF) == 0xFF) {
-                const unsigned char lo = nes_read_char(nes, addr);
-                const unsigned char hi = nes_read_char(nes, addr & 0xFF00);
+                const uint8_t lo = nes_read_char(nes, addr);
+                const uint8_t hi = nes_read_char(nes, addr & 0xFF00);
                 return nes_get_addr_ptr(nes, hi << 8 | lo);
             }
 
@@ -92,17 +92,17 @@ inline unsigned char* get_address(struct Nes* nes, struct CPU* cpu, enum Address
         }
         case Addressing_IndirectX:
         {
-            const unsigned char baseAddr = nes_read_char(nes, cpu->pc);
-            const unsigned char addr = baseAddr + cpu->x;
-            const unsigned char lo = nes_read_char(nes, addr);
-            const unsigned char hi = nes_read_char(nes, addr + 1);
+            const uint8_t baseAddr = nes_read_char(nes, cpu->pc);
+            const uint8_t addr = baseAddr + cpu->x;
+            const uint8_t lo = nes_read_char(nes, addr);
+            const uint8_t hi = nes_read_char(nes, addr + 1);
             return nes_get_addr_ptr(nes, hi << 8 | lo);
         }
         case Addressing_IndirectY:
         {
-            const unsigned char baseAddr = nes_read_char(nes, cpu->pc);
-            const unsigned char lo = nes_read_char(nes, baseAddr);
-            const unsigned char hi = nes_read_char(nes, baseAddr + 1);
+            const uint8_t baseAddr = nes_read_char(nes, cpu->pc);
+            const uint8_t lo = nes_read_char(nes, baseAddr);
+            const uint8_t hi = nes_read_char(nes, baseAddr + 1);
             const unsigned derefBase = (hi << 8 | lo);
             const unsigned short deref = derefBase + cpu->y;
 
@@ -114,316 +114,316 @@ inline unsigned char* get_address(struct Nes* nes, struct CPU* cpu, enum Address
     }
 }
 
-inline void brk(struct Nes* nes, struct CPU* cpu, unsigned char* addr) {
+inline void brk(struct Nes* nes, struct CPU* cpu, uint8_t* addr) {
     cpu->is_stopped = true;
 }
 
-inline void ora(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void ora(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     cpu->acc |= *addr;
 }
 
-inline void kil(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void kil(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     cpu->is_stopped = true;
 }
 
-inline void slo(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void slo(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void asl(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void asl(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     *addr <<= 1;
 
     set_higher_carry(nes, cpu, *addr);
     set_zero_and_negative(nes, cpu, *addr);
 }
 
-inline void php(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void php(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void aac(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void aac(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void bpl(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void bpl(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void clc(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void clc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void jsr(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void jsr(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void and(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void and(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void rla(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void rla(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void bit(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void bit(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void rol(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void rol(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void plp(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void plp(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void bmi(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void bmi(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void sec(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void sec(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void rti(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void rti(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void eor(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void eor(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void sre(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void sre(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void lsr(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void lsr(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void pha(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void pha(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void asr(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void asr(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void jmp(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void jmp(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void bvc(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void bvc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void cli(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void cli(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void rts(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void rts(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void adc(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void adc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void rra(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void rra(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void ror(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void ror(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void pla(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void pla(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void arr(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void arr(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void bvs(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void bvs(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void sei(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void sei(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void sta(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void sta(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void sax(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void sax(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void sty(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void sty(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void stx(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void stx(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void dey(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void dey(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void txa(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void txa(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void xaa(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void xaa(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void bcc(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void bcc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void axa(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void axa(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void tya(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void tya(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void txs(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void txs(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void xas(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void xas(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void sya(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void sya(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void sxa(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void sxa(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void ldy(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void ldy(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     cpu->y = *addr;
     set_zero_and_negative(nes,cpu, cpu->y);
 }
 
-inline void lda(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void lda(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void ldx(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void ldx(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void lax(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void lax(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void tay(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void tay(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void tax(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void tax(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void atx(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void atx(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void bcs(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void bcs(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void clv(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void clv(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void tsx(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void tsx(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void lar(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void lar(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void cpy(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void cpy(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void cmp(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void cmp(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void dcp(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void dcp(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void dec(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void dec(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void iny(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void iny(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void dex(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void dex(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     cpu->x--;
     set_zero_and_negative(nes, cpu, cpu->x);
 }
 
-inline void axs(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void axs(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void bne(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void bne(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void cld(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void cld(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void cpx(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void cpx(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void sbc(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void sbc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void isb(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void isb(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void inc(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void inc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void inx(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void inx(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void nop(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void nop(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void beq(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void beq(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void sed(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+inline void sed(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, unsigned char opcode) {
+inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, uint8_t opcode) {
     switch (opcode) {
         INSTRUCTION(0x00, brk, 1, 7, Addressing_NoneAddressing)
         INSTRUCTION(0x01, ora, 2, 6, Addressing_IndirectX)
