@@ -18,6 +18,15 @@ struct Nes* nes_init(char* file_path) {
     return nes;
 }
 
+struct Nes* nes_init_from_buffer(const unsigned char* buffer, const long size) {
+    struct Nes* nes = malloc(sizeof(struct Nes));
+
+    nes->cartridge = nes_cartridge_load_from_buffer(buffer, size);
+    nes->cpu =  nes_cpu_init(nes);
+
+    return nes;
+}
+
 inline void nes_get_samples(void* buffer_data, unsigned int frames, struct Nes* nes, Color* frame_buffer, bool* is_new_frame){
     nes_cpu_tick(nes);
 }

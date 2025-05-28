@@ -23,6 +23,7 @@ enum AddressingMode {
     Addressing_NoneAddressing,
 };
 
+void set_zero_and_negative(struct Nes* nes, struct CPU* cpu, unsigned char value);
 bool is_page_cross(unsigned short base, unsigned short addr);
 unsigned char* get_address(struct Nes* nes, struct CPU* cpu, enum AddressingMode mode);
 

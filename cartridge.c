@@ -9,6 +9,8 @@
 #include "cartridge.h"
 #include "nes-internal.h"
 
+#include "stdint.h"
+
 const int NES_TAG_1 = 0x00;
 const int NES_TAG_2 = 0x01;
 const int NES_TAG_3 = 0x02;
@@ -35,7 +37,6 @@ const int TRAINER_SIZE = 0x200;
 
 
 struct Cartridge* nes_cartridge_load_from_file(const char* file_path) {
-    struct Cartridge* cartridge = malloc(sizeof(struct Cartridge));
 
     FILE* file = fopen(file_path, "r");
     fseek(file, 0, SEEK_END);
@@ -48,31 +49,36 @@ struct Cartridge* nes_cartridge_load_from_file(const char* file_path) {
         fread(file_contents + i, 1, 1, file);
     }
 
-    if (!(file_contents[NES_TAG_1] == 'N' &&
-          file_contents[NES_TAG_2] == 'E' &&
-          file_contents[NES_TAG_3] == 'S' &&
-          file_contents[NES_TAG_4] == 0x1A)) {
+    struct Cartridge* cartridge = nes_cartridge_load_from_buffer(file_contents, file_size);
+
+    fclose(file);
+    free(file_contents);
+
+    return cartridge;
+}
+
+struct Cartridge* nes_cartridge_load_from_buffer(const unsigned char* buffer, const long size) {
+    struct Cartridge* cartridge = malloc(sizeof(struct Cartridge));
+    if (!(buffer[NES_TAG_1] == 'N' &&
+          buffer[NES_TAG_2] == 'E' &&
+          buffer[NES_TAG_3] == 'S' &&
+          buffer[NES_TAG_4] == 0x1A)) {
         printf("Not a valid cartridge file!!!\n");
 
-        fclose(file);
-        free(file_contents);
         return nullptr;
     }
 
-    const bool is_ines = file_contents[INES_DETECTION] == 0x00;
-    const bool is_nes2 = file_contents[INES_DETECTION] == 0x08;
+    const bool is_ines = buffer[INES_DETECTION] == 0x00;
+    const bool is_nes2 = buffer[INES_DETECTION] == 0x08;
 
     if (!is_ines && !is_nes2) {
         printf("Not a valid cartridge file!!!\n");
-
-        fclose(file);
-        free(file_contents);
         return nullptr;
     }
 
-    const int prg_rom_size = file_contents[INES_PRG_ROM_SIZE] * INES_PRG_ROM_BANK_SIZE;
-    int chr_rom_size = file_contents[INES_CHR_ROM_SIZE] * INES_CHR_ROM_BANK_SIZE;
-    int prg_ram_size = file_contents[INES_PRG_RAM_SIZE] * INES_PRG_RAM_BANK_SIZE;
+    const int prg_rom_size = buffer[INES_PRG_ROM_SIZE] * INES_PRG_ROM_BANK_SIZE;
+    int chr_rom_size = buffer[INES_CHR_ROM_SIZE] * INES_CHR_ROM_BANK_SIZE;
+    int prg_ram_size = buffer[INES_PRG_RAM_SIZE] * INES_PRG_RAM_BANK_SIZE;
 
     if (!prg_ram_size)
         prg_ram_size = INES_PRG_RAM_BANK_SIZE;
@@ -81,23 +87,20 @@ struct Cartridge* nes_cartridge_load_from_file(const char* file_path) {
     if (!chr_rom_size)
         chr_rom_size = INES_CHR_ROM_BANK_SIZE;
 
-    enum Mirroring mirroring = (enum Mirroring)file_contents[INES_CONTROL_1] & 0b1;
-    const bool battery_backed = file_contents[INES_CONTROL_1] & 0b10;
-    const bool skip_trainer = file_contents[INES_CONTROL_1] & 0b100;
+    enum Mirroring mirroring = (enum Mirroring)buffer[INES_CONTROL_1] & 0b1;
+    const bool battery_backed = buffer[INES_CONTROL_1] & 0b10;
+    const bool skip_trainer = buffer[INES_CONTROL_1] & 0b100;
 
-    if (file_contents[INES_CONTROL_1] & 0b1000)
+    if (buffer[INES_CONTROL_1] & 0b1000)
         mirroring = Mirroring_FourScreen;
 
-    const int mapper_lo = (file_contents[INES_CONTROL_1] & 0b11110000) >> 4;
-    const int mapper_hi = (file_contents[INES_CONTROL_2] & 0b11110000);
+    const int mapper_lo = (buffer[INES_CONTROL_1] & 0b11110000) >> 4;
+    const int mapper_hi = (buffer[INES_CONTROL_2] & 0b11110000);
 
     const int mapper =  mapper_hi | mapper_lo;
 
     if (is_nes2) {
         printf("NES 2.0 not supported yet!!!\n");
-
-        fclose(file);
-        free(file_contents);
         return nullptr;
     }
 
@@ -116,15 +119,12 @@ struct Cartridge* nes_cartridge_load_from_file(const char* file_path) {
     if (skip_trainer)
         prg_rom_start += TRAINER_SIZE;
 
-    memcpy(cartridge->prg_rom, &file_contents[prg_rom_start], prg_rom_size * sizeof(unsigned char));
+    memcpy(cartridge->prg_rom, &buffer[prg_rom_start], prg_rom_size * sizeof(unsigned char));
 
     if (!uses_chr_ram) {
         const int chr_rom_start = prg_rom_start + prg_rom_size;
-        memcpy(cartridge->chr_rom, &file_contents[chr_rom_start], chr_rom_size * sizeof(unsigned char));
+        memcpy(cartridge->chr_rom, &buffer[chr_rom_start], chr_rom_size * sizeof(unsigned char));
     }
-
-    fclose(file);
-    free(file_contents);
 
     return cartridge;
 }

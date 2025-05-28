@@ -17,7 +17,20 @@ case opcode: {\
     break; \
 } \
 
-inline bool is_page_cross(unsigned short base, unsigned short addr) {
+void set_zero_and_negative(struct Nes* nes, struct CPU* cpu, unsigned char value) {
+    cpu->p.flags.zero = value == 0;
+    cpu->p.flags.negative = (value & 0x80) == 0x80;
+}
+
+void set_lower_carry(struct Nes* nes, struct CPU* cpu, unsigned char value) {
+    cpu->p.flags.carry = (value & 0x01) == 0x01;
+}
+
+void set_higher_carry(struct Nes* nes, struct CPU* cpu, unsigned char value) {
+    cpu->p.flags.carry = (value & 0x80) == 0x80;
+}
+
+bool is_page_cross(unsigned short base, unsigned short addr) {
     return base & 0xFF00 != addr & 0xFF00;
 }
 
@@ -118,7 +131,10 @@ inline void slo(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 }
 
 inline void asl(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
+    *addr <<= 1;
 
+    set_higher_carry(nes, cpu, *addr);
+    set_zero_and_negative(nes, cpu, *addr);
 }
 
 inline void php(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
@@ -294,7 +310,8 @@ inline void sxa(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 }
 
 inline void ldy(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
-
+    cpu->y = *addr;
+    set_zero_and_negative(nes,cpu, cpu->y);
 }
 
 inline void lda(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
@@ -358,7 +375,8 @@ inline void iny(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
 }
 
 inline void dex(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
-
+    cpu->x--;
+    set_zero_and_negative(nes, cpu, cpu->x);
 }
 
 inline void axs(struct Nes* nes, struct CPU* cpu, unsigned char* addr){
