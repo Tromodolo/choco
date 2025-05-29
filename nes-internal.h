@@ -48,14 +48,13 @@ struct Cartridge {
 //
 typedef union
 {
-    struct
-    {
+    struct {
         uint8_t carry : 1;
         uint8_t zero : 1;
         uint8_t interrupt_disable : 1;
         uint8_t decimal : 1;
-        uint8_t _unused_1 : 1;
-        uint8_t _unused_2 : 1;
+        uint8_t break1 : 1;
+        uint8_t break2 : 1;
         uint8_t overflow : 1;
         uint8_t negative : 1;
     } flags;
