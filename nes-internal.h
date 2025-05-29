@@ -67,8 +67,11 @@ struct CPU {
     uint8_t x;
     uint8_t y;
     uint16_t pc;
+    uint16_t pc_pre;
     uint8_t sp;
     uint8_t waiting_cycles;
+
+    uint8_t current_instruction;
 
     bool is_stopped;
 

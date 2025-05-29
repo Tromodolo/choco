@@ -142,7 +142,9 @@ const uint16_t RAM_MIRRORS_END = 0x1fff;
 const uint16_t PPU_MIRRORS_END = 0x3fff;
 
 inline uint8_t* nes_cartridge_get_addr_ptr(const struct Cartridge* cartridge, uint16_t addr) {
-    if (addr >= PRG_ROM_START && addr <= PRG_ROM_END) {
+    if (addr <= RAM_MIRRORS_END) {
+        return &cartridge->prg_ram[addr & 0x7FF];
+    } else if (addr >= PRG_ROM_START && addr <= PRG_ROM_END) {
         addr -= PRG_ROM_START;
         addr %= cartridge->prg_rom_size;
         return &cartridge->prg_rom[addr];
@@ -152,7 +154,9 @@ inline uint8_t* nes_cartridge_get_addr_ptr(const struct Cartridge* cartridge, ui
 }
 
 inline uint8_t nes_cartridge_read_char(const struct Cartridge* cartridge, uint16_t addr) {
-    if (addr >= PRG_ROM_START && addr <= PRG_ROM_END) {
+    if (addr <= RAM_MIRRORS_END) {
+        return cartridge->prg_ram[addr & 0x7FF];
+    } else if (addr >= PRG_ROM_START && addr <= PRG_ROM_END) {
         addr -= PRG_ROM_START;
         addr %= cartridge->prg_rom_size;
         return cartridge->prg_rom[addr];
@@ -161,7 +165,9 @@ inline uint8_t nes_cartridge_read_char(const struct Cartridge* cartridge, uint16
     return 0;
 }
 inline void nes_cartridge_write_char(const struct Cartridge* cartridge, uint16_t addr, uint8_t val) {
-    if (addr >= PRG_ROM_START && addr <= PRG_ROM_END) {
+    if (addr <= RAM_MIRRORS_END) {
+        cartridge->prg_ram[addr & 0x7FF] = val;
+    } else if (addr >= PRG_ROM_START && addr <= PRG_ROM_END) {
         addr -= PRG_ROM_START;
         addr %= cartridge->prg_rom_size;
         cartridge->prg_rom[addr] = val;

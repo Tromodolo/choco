@@ -11,8 +11,11 @@
 
 #define INSTRUCTION(opcode, func, numbytes, cyclecount, addressing) \
 case opcode: {\
+    cpu->current_instruction = opcode; \
+    cpu->pc_pre = cpu->pc; \
     func(nes, cpu, get_address(nes, cpu, addressing)); \
-    cpu->pc += numbytes - 1;\
+    if (cpu->pc == cpu->pc_pre)\
+        cpu->pc += numbytes - 1;\
     cpu->waiting_cycles += cyclecount;\
     break; \
 } \
@@ -34,6 +37,19 @@ bool is_page_cross(uint16_t base, uint16_t addr) {
     return base & 0xFF00 != addr & 0xFF00;
 }
 
+void branch(struct Nes* nes, struct CPU* cpu, bool condition, uint8_t* addr) {
+    if (!condition)
+        return;
+
+    cpu->waiting_cycles += 1;
+    const uint16_t jump_addr = cpu->pc + *addr + 1;
+
+    if (is_page_cross(cpu->pc + 1, jump_addr)) {
+        cpu->waiting_cycles += 1;
+    }
+    cpu->pc = jump_addr;
+}
+
 inline uint8_t* get_address(struct Nes* nes, struct CPU* cpu, enum AddressingMode mode) {
     switch (mode) {
         case Addressing_NoneAddressing:
@@ -43,16 +59,13 @@ inline uint8_t* get_address(struct Nes* nes, struct CPU* cpu, enum AddressingMod
         case Addressing_Accumulator:
             return &cpu->acc;
         case Addressing_Relative:
-        {
-            const uint8_t jump = nes_read_char(nes, cpu->pc++);
-            return nes_get_addr_ptr(nes, cpu->pc + jump);
-        }
-        case Addressing_ZeroPage:
             return nes_get_addr_ptr(nes, cpu->pc);
+        case Addressing_ZeroPage:
+            return nes_get_addr_ptr(nes, nes_read_char(nes, cpu->pc));
         case Addressing_ZeroPageX:
-            return nes_get_addr_ptr(nes, cpu->pc + cpu->x);
+            return nes_get_addr_ptr(nes, nes_read_char(nes, cpu->pc) + cpu->x);
         case Addressing_ZeroPageY:
-            return nes_get_addr_ptr(nes, cpu->pc + cpu->y);
+            return nes_get_addr_ptr(nes, nes_read_char(nes, cpu->pc) + cpu->y);
         case Addressing_Absolute:
             return nes_get_addr_ptr(nes, nes_read_short(nes, cpu->pc));
         case Addressing_AbsoluteX:
@@ -77,18 +90,9 @@ inline uint8_t* get_address(struct Nes* nes, struct CPU* cpu, enum AddressingMod
         }
         case Addressing_Indirect:
         {
-            const uint16_t addr = nes_read_short(nes, cpu->pc);
-            // 6502 bug mode with page boundary:
-            //  if address $3000 contains $40, $30FF contains $80, and $3100 contains $50,
-            // the result of JMP ($30FF) will be a transfer of control to $4080 rather than $5080 as you intended
-            // i.e. the 6502 took the low byte of the address from $30FF and the high byte from $3000
-            if ((addr & 0xFF) == 0xFF) {
-                const uint8_t lo = nes_read_char(nes, addr);
-                const uint8_t hi = nes_read_char(nes, addr & 0xFF00);
-                return nes_get_addr_ptr(nes, hi << 8 | lo);
-            }
-
-            return nes_get_addr_ptr(nes, addr);
+            // NOTE: This is only needed for JMP, and because it needs to get a 16-bit address to jump to,
+            // it's not posible to handle here, so i'm just returning null
+            return nullptr;
         }
         case Addressing_IndirectX:
         {
@@ -146,7 +150,7 @@ inline void aac(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 }
 
 inline void bpl(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-
+    branch(nes, cpu, cpu->p.flags.negative == 0, addr);
 }
 
 inline void clc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
@@ -178,7 +182,7 @@ inline void plp(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 }
 
 inline void bmi(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-
+    branch(nes, cpu, cpu->p.flags.negative == 1, addr);
 }
 
 inline void sec(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
@@ -209,12 +213,34 @@ inline void asr(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 }
 
-inline void jmp(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void jmp(struct Nes* nes, struct CPU* cpu, uint8_t* _){
+    // absolute addressing
+    if (cpu->current_instruction == 0x4C) {
+        cpu->pc = nes_read_short(nes, cpu->pc);
+        return;
+    }
 
+    // otherwise indirect
+    const uint16_t addr = nes_read_short(nes, cpu->pc);
+
+    // 6502 bug mode with page boundary:
+    //  if address $3000 contains $40, $30FF contains $80, and $3100 contains $50,
+    // the result of JMP ($30FF) will be a transfer of control to $4080 rather than $5080 as you intended
+    // i.e. the 6502 took the low byte of the address from $30FF and the high byte from $3000
+    uint16_t jmp_addr = 0;
+    if ((addr & 0xFF) == 0xFF) {
+        const uint8_t lo = nes_read_char(nes, addr);
+        const uint8_t hi = nes_read_char(nes, addr & 0xFF00);
+        jmp_addr = nes_read_short(nes, hi << 8 | lo);
+    } else {
+        jmp_addr = nes_read_short(nes, addr);
+    }
+
+    cpu->pc = jmp_addr;
 }
 
 inline void bvc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-
+    branch(nes, cpu, cpu->p.flags.overflow == 0, addr);
 }
 
 inline void cli(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
@@ -246,7 +272,7 @@ inline void arr(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 }
 
 inline void bvs(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-
+    branch(nes, cpu, cpu->p.flags.overflow == 1, addr);
 }
 
 inline void sei(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
@@ -282,7 +308,7 @@ inline void xaa(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 }
 
 inline void bcc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-
+    branch(nes, cpu, cpu->p.flags.carry == 0, addr);
 }
 
 inline void axa(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
@@ -315,11 +341,13 @@ inline void ldy(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 }
 
 inline void lda(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-
+    cpu->acc = *addr;
+    set_zero_and_negative(nes, cpu, cpu->acc);
 }
 
 inline void ldx(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-
+    cpu->x = *addr;
+    set_zero_and_negative(nes, cpu, cpu->x);
 }
 
 inline void lax(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
@@ -339,7 +367,7 @@ inline void atx(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 }
 
 inline void bcs(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-
+    branch(nes, cpu, cpu->p.flags.carry == 1, addr);
 }
 
 inline void clv(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
@@ -384,7 +412,7 @@ inline void axs(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 }
 
 inline void bne(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-
+    branch(nes, cpu, cpu->p.flags.zero == 0, addr);
 }
 
 inline void cld(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
@@ -416,7 +444,7 @@ inline void nop(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 }
 
 inline void beq(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-
+    branch(nes, cpu, cpu->p.flags.zero == 1, addr);
 }
 
 inline void sed(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
