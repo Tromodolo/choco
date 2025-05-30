@@ -6,6 +6,9 @@
 #include <stdint.h>
 
 #include "cpu.h"
+
+#include <stdio.h>
+
 #include "instructions.h"
 #include "nes.h"
 #include "nes-internal.h"
@@ -26,12 +29,19 @@ struct CPU* nes_cpu_init(struct Nes* nes) {
     cpu->waiting_cycles = 0;
     cpu->is_stopped = false;
 
+    if(getenv("NESTEST")) {
+        cpu->pc = 0xC000;
+    }
+
     return cpu;
 }
 
 void nes_cpu_tick(struct Nes* nes) {
     if (!nes->cpu->is_stopped && nes->cpu->waiting_cycles == 0) {
         const uint8_t opcode = nes_read_char(nes, nes->cpu->pc++);
+
+        // printf("PC: %04x OP: %02x\n", nes->cpu->pc - 1, opcode);
+
         nes_cpu_handle_instruction(nes, nes->cpu, opcode);
     }
     nes->cpu->waiting_cycles--;

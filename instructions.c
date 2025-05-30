@@ -321,7 +321,7 @@ inline void rts(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     const uint8_t pc_lo = stack_pop(nes, cpu);
     const uint8_t pc_hi = stack_pop(nes, cpu);
     const uint16_t new_pc = pc_hi << 8 | pc_lo;
-    cpu->pc = new_pc + 1;
+    cpu->pc = new_pc;
 }
 
 inline void adc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){

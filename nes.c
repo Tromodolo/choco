@@ -28,7 +28,8 @@ struct Nes* nes_init_from_buffer(const uint8_t* buffer, const long size) {
 }
 
 inline void nes_get_samples(void* buffer_data, unsigned int frames, struct Nes* nes, Color* frame_buffer, bool* is_new_frame){
-    nes_cpu_tick(nes);
+    for (;;)
+        nes_cpu_tick(nes);
 }
 
 void nes_free(struct Nes* nes) {

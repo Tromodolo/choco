@@ -166,6 +166,9 @@ inline uint8_t nes_cartridge_read_char(const struct Cartridge* cartridge, uint16
 }
 inline void nes_cartridge_write_char(const struct Cartridge* cartridge, uint16_t addr, uint8_t val) {
     if (addr <= RAM_MIRRORS_END) {
+        if (addr == 0x02)
+            printf("%d\\n", addr);
+
         cartridge->prg_ram[addr & 0x7FF] = val;
     } else if (addr >= PRG_ROM_START && addr <= PRG_ROM_END) {
         addr -= PRG_ROM_START;
