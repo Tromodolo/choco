@@ -1,0 +1,334 @@
+//
+// Created by tromo on 5/30/25.
+//
+
+#include <stdio.h>
+
+#include "nes-internal.h"
+#include "nes-logging.h"
+
+#include <stdlib.h>
+
+#include "instructions-internal.h"
+#include "nes.h"
+
+struct Instruction {
+    const char* name;
+    const int num_bytes;
+    enum AddressingMode mode;
+};
+
+const struct Instruction instruction_mapping[] = {
+    {"BRK", 1, Addressing_NoneAddressing},
+    {"ORA", 2, Addressing_IndirectX},
+    {"KIL", 1, Addressing_NoneAddressing},
+    {"SLO", 2, Addressing_IndirectX},
+    {"NOP", 2, Addressing_ZeroPage},
+    {"ORA", 2, Addressing_ZeroPage},
+    {"ASL", 2, Addressing_ZeroPage},
+    {"SLO", 2, Addressing_ZeroPage},
+    {"PHP", 1, Addressing_NoneAddressing},
+    {"ORA", 2, Addressing_Immediate},
+    {"ASL", 1, Addressing_Accumulator},
+    {"AAC", 2, Addressing_Immediate},
+    {"NOP", 3, Addressing_Absolute},
+    {"ORA", 3, Addressing_Absolute},
+    {"ASL", 3, Addressing_Absolute},
+    {"SLO", 3, Addressing_Absolute},
+    {"BPL", 2, Addressing_Relative},
+    {"ORA", 2, Addressing_IndirectY},
+    {"KIL", 1, Addressing_NoneAddressing},
+    {"SLO", 2, Addressing_IndirectY},
+    {"NOP", 2, Addressing_ZeroPageX},
+    {"ORA", 2, Addressing_ZeroPageX},
+    {"ASL", 2, Addressing_ZeroPageX},
+    {"SLO", 2, Addressing_ZeroPageX},
+    {"CLC", 1, Addressing_NoneAddressing},
+    {"ORA", 3, Addressing_AbsoluteY},
+    {"NOP", 1, Addressing_NoneAddressing},
+    {"SLO", 3, Addressing_AbsoluteY},
+    {"NOP", 3, Addressing_AbsoluteX},
+    {"ORA", 3, Addressing_AbsoluteX},
+    {"ASL", 3, Addressing_AbsoluteX},
+    {"SLO", 3, Addressing_AbsoluteX},
+    {"JSR", 3, Addressing_Absolute},
+    {"AND", 2, Addressing_IndirectX},
+    {"KIL", 1, Addressing_NoneAddressing},
+    {"RLA", 2, Addressing_IndirectX},
+    {"BIT", 2, Addressing_ZeroPage},
+    {"AND", 2, Addressing_ZeroPage},
+    {"ROL", 2, Addressing_ZeroPage},
+    {"RLA", 2, Addressing_ZeroPage},
+    {"PLP", 1, Addressing_NoneAddressing},
+    {"AND", 2, Addressing_Immediate},
+    {"ROL", 1, Addressing_Accumulator},
+    {"AAC", 2, Addressing_Immediate},
+    {"BIT", 3, Addressing_Absolute},
+    {"AND", 3, Addressing_Absolute},
+    {"ROL", 3, Addressing_Absolute},
+    {"RLA", 3, Addressing_Absolute},
+    {"BMI", 2, Addressing_Relative},
+    {"AND", 2, Addressing_IndirectY},
+    {"KIL", 1, Addressing_NoneAddressing},
+    {"RLA", 2, Addressing_IndirectY},
+    {"NOP", 2, Addressing_ZeroPageX},
+    {"AND", 2, Addressing_ZeroPageX},
+    {"ROL", 2, Addressing_ZeroPageX},
+    {"RLA", 2, Addressing_ZeroPageX},
+    {"SEC", 1, Addressing_NoneAddressing},
+    {"AND", 3, Addressing_AbsoluteY},
+    {"NOP", 1, Addressing_NoneAddressing},
+    {"RLA", 3, Addressing_AbsoluteY},
+    {"NOP", 3, Addressing_AbsoluteX},
+    {"AND", 3, Addressing_AbsoluteX},
+    {"ROL", 3, Addressing_AbsoluteX},
+    {"RLA", 3, Addressing_AbsoluteX},
+    {"RTI", 1, Addressing_NoneAddressing},
+    {"EOR", 2, Addressing_IndirectX},
+    {"KIL", 1, Addressing_NoneAddressing},
+    {"SRE", 2, Addressing_IndirectX},
+    {"NOP", 2, Addressing_ZeroPage},
+    {"EOR", 2, Addressing_ZeroPage},
+    {"LSR", 2, Addressing_ZeroPage},
+    {"SRE", 2, Addressing_ZeroPage},
+    {"PHA", 1, Addressing_NoneAddressing},
+    {"EOR", 2, Addressing_Immediate},
+    {"LSR", 1, Addressing_Accumulator},
+    {"ASR", 2, Addressing_Immediate},
+    {"JMP", 3, Addressing_Immediate},
+    {"EOR", 3, Addressing_Absolute},
+    {"LSR", 3, Addressing_Absolute},
+    {"SRE", 3, Addressing_Absolute},
+    {"BVC", 2, Addressing_Relative},
+    {"EOR", 2, Addressing_IndirectY},
+    {"KIL", 1, Addressing_NoneAddressing},
+    {"SRE", 2, Addressing_IndirectY},
+    {"NOP", 2, Addressing_ZeroPageX},
+    {"EOR", 2, Addressing_ZeroPageX},
+    {"LSR", 2, Addressing_ZeroPageX},
+    {"SRE", 2, Addressing_ZeroPageX},
+    {"CLI", 1, Addressing_NoneAddressing},
+    {"EOR", 3, Addressing_AbsoluteY},
+    {"NOP", 1, Addressing_NoneAddressing},
+    {"SRE", 3, Addressing_AbsoluteY},
+    {"NOP", 3, Addressing_AbsoluteX},
+    {"EOR", 3, Addressing_AbsoluteX},
+    {"LSR", 3, Addressing_AbsoluteX},
+    {"SRE", 3, Addressing_AbsoluteX},
+    {"RTS", 1, Addressing_NoneAddressing},
+    {"ADC", 2, Addressing_IndirectX},
+    {"KIL", 1, Addressing_NoneAddressing},
+    {"RRA", 2, Addressing_IndirectX},
+    {"NOP", 2, Addressing_ZeroPage},
+    {"ADC", 2, Addressing_ZeroPage},
+    {"ROR", 2, Addressing_ZeroPage},
+    {"RRA", 2, Addressing_ZeroPage},
+    {"PLA", 1, Addressing_NoneAddressing},
+    {"ADC", 2, Addressing_Immediate},
+    {"ROR", 1, Addressing_Accumulator},
+    {"ARR", 2, Addressing_Immediate},
+    {"JMP", 3, Addressing_Indirect},
+    {"ADC", 3, Addressing_Absolute},
+    {"ROR", 3, Addressing_Absolute},
+    {"RRA", 3, Addressing_Absolute},
+    {"BVS", 2, Addressing_Relative},
+    {"ADC", 2, Addressing_IndirectY},
+    {"KIL", 1, Addressing_NoneAddressing},
+    {"RRA", 2, Addressing_IndirectY},
+    {"NOP", 2, Addressing_ZeroPageX},
+    {"ADC", 2, Addressing_ZeroPageX},
+    {"ROR", 2, Addressing_ZeroPageX},
+    {"RRA", 2, Addressing_ZeroPageX},
+    {"SEI", 1, Addressing_NoneAddressing},
+    {"ADC", 3, Addressing_AbsoluteY},
+    {"NOP", 1, Addressing_NoneAddressing},
+    {"RRA", 3, Addressing_AbsoluteY},
+    {"NOP", 3, Addressing_AbsoluteX},
+    {"ADC", 3, Addressing_AbsoluteX},
+    {"ROR", 3, Addressing_AbsoluteX},
+    {"RRA", 3, Addressing_AbsoluteX},
+    {"NOP", 2, Addressing_Immediate},
+    {"STA", 2, Addressing_IndirectX},
+    {"NOP", 2, Addressing_Immediate},
+    {"SAX", 2, Addressing_IndirectX},
+    {"STY", 2, Addressing_ZeroPage},
+    {"STA", 2, Addressing_ZeroPage},
+    {"STX", 2, Addressing_ZeroPage},
+    {"SAX", 2, Addressing_ZeroPage},
+    {"DEY", 1, Addressing_NoneAddressing},
+    {"NOP", 2, Addressing_Immediate},
+    {"TXA", 1, Addressing_NoneAddressing},
+    {"XAA", 2, Addressing_Immediate},
+    {"STY", 3, Addressing_Absolute},
+    {"STA", 3, Addressing_Absolute},
+    {"STX", 3, Addressing_Absolute},
+    {"SAX", 3, Addressing_Absolute},
+    {"BCC", 2, Addressing_Relative},
+    {"STA", 2, Addressing_IndirectY},
+    {"KIL", 1, Addressing_NoneAddressing},
+    {"AXA", 2, Addressing_IndirectY},
+    {"STY", 2, Addressing_ZeroPageX},
+    {"STA", 2, Addressing_ZeroPageX},
+    {"STX", 2, Addressing_ZeroPageY},
+    {"SAX", 2, Addressing_ZeroPageY},
+    {"TYA", 1, Addressing_NoneAddressing},
+    {"STA", 3, Addressing_AbsoluteY},
+    {"TXS", 1, Addressing_NoneAddressing},
+    {"XAS", 3, Addressing_AbsoluteY},
+    {"SYA", 3, Addressing_AbsoluteX},
+    {"STA", 3, Addressing_AbsoluteX},
+    {"SXA", 3, Addressing_AbsoluteY},
+    {"AXA", 3, Addressing_AbsoluteY},
+    {"LDY", 2, Addressing_Immediate},
+    {"LDA", 2, Addressing_IndirectX},
+    {"LDX", 2, Addressing_Immediate},
+    {"LAX", 2, Addressing_IndirectX},
+    {"LDY", 2, Addressing_ZeroPage},
+    {"LDA", 2, Addressing_ZeroPage},
+    {"LDX", 2, Addressing_ZeroPage},
+    {"LAX", 2, Addressing_ZeroPage},
+    {"TAY", 1, Addressing_NoneAddressing},
+    {"LDA", 2, Addressing_Immediate},
+    {"TAX", 1, Addressing_NoneAddressing},
+    {"ATX", 2, Addressing_Immediate},
+    {"LDY", 3, Addressing_Absolute},
+    {"LDA", 3, Addressing_Absolute},
+    {"LDX", 3, Addressing_Absolute},
+    {"LAX", 3, Addressing_Absolute},
+    {"BCS", 2, Addressing_Relative},
+    {"LDA", 2, Addressing_IndirectY},
+    {"KIL", 1, Addressing_NoneAddressing},
+    {"LAX", 2, Addressing_IndirectY},
+    {"LDY", 2, Addressing_ZeroPageX},
+    {"LDA", 2, Addressing_ZeroPageX},
+    {"LDX", 2, Addressing_ZeroPageY},
+    {"LAX", 2, Addressing_ZeroPageY},
+    {"CLV", 1, Addressing_NoneAddressing},
+    {"LDA", 3, Addressing_AbsoluteY},
+    {"TSX", 1, Addressing_NoneAddressing},
+    {"LAR", 3, Addressing_AbsoluteY},
+    {"LDY", 3, Addressing_AbsoluteX},
+    {"LDA", 3, Addressing_AbsoluteX},
+    {"LDX", 3, Addressing_AbsoluteY},
+    {"LAX", 3, Addressing_AbsoluteY},
+    {"CPY", 2, Addressing_Immediate},
+    {"CMP", 2, Addressing_IndirectX},
+    {"NOP", 2, Addressing_Immediate},
+    {"DCP", 2, Addressing_IndirectX},
+    {"CPY", 2, Addressing_ZeroPage},
+    {"CMP", 2, Addressing_ZeroPage},
+    {"DEC", 2, Addressing_ZeroPage},
+    {"DCP", 2, Addressing_ZeroPage},
+    {"INY", 1, Addressing_NoneAddressing},
+    {"CMP", 2, Addressing_Immediate},
+    {"DEX", 1, Addressing_NoneAddressing},
+    {"AXS", 2, Addressing_Immediate},
+    {"CPY", 3, Addressing_Absolute},
+    {"CMP", 3, Addressing_Absolute},
+    {"DEC", 3, Addressing_Absolute},
+    {"DCP", 3, Addressing_Absolute},
+    {"BNE", 2, Addressing_Relative},
+    {"CMP", 2, Addressing_IndirectY},
+    {"KIL", 1, Addressing_NoneAddressing},
+    {"DCP", 2, Addressing_IndirectY},
+    {"NOP", 2, Addressing_ZeroPageX},
+    {"CMP", 2, Addressing_ZeroPageX},
+    {"DEC", 2, Addressing_ZeroPageX},
+    {"DCP", 2, Addressing_ZeroPageX},
+    {"CLD", 1, Addressing_NoneAddressing},
+    {"CMP", 3, Addressing_AbsoluteY},
+    {"NOP", 1, Addressing_NoneAddressing},
+    {"DCP", 3, Addressing_AbsoluteY},
+    {"NOP", 3, Addressing_AbsoluteX},
+    {"CMP", 3, Addressing_AbsoluteX},
+    {"DEC", 3, Addressing_AbsoluteX},
+    {"DCP", 3, Addressing_AbsoluteX},
+    {"CPX", 2, Addressing_Immediate},
+    {"SBC", 2, Addressing_IndirectX},
+    {"NOP", 2, Addressing_Immediate},
+    {"ISB", 2, Addressing_IndirectX},
+    {"CPX", 2, Addressing_ZeroPage},
+    {"SBC", 2, Addressing_ZeroPage},
+    {"INC", 2, Addressing_ZeroPage},
+    {"ISB", 2, Addressing_ZeroPage},
+    {"INX", 1, Addressing_NoneAddressing},
+    {"SBC", 2, Addressing_Immediate},
+    {"NOP", 1, Addressing_NoneAddressing},
+    {"SBC", 2, Addressing_Immediate},
+    {"CPX", 3, Addressing_Absolute},
+    {"SBC", 3, Addressing_Absolute},
+    {"INC", 3, Addressing_Absolute},
+    {"ISB", 3, Addressing_Absolute},
+    {"BEQ", 2, Addressing_Relative},
+    {"SBC", 2, Addressing_IndirectY},
+    {"KIL", 1, Addressing_NoneAddressing},
+    {"ISB", 2, Addressing_IndirectY},
+    {"NOP", 2, Addressing_ZeroPageX},
+    {"SBC", 2, Addressing_ZeroPageX},
+    {"INC", 2, Addressing_ZeroPageX},
+    {"ISB", 2, Addressing_ZeroPageX},
+    {"SED", 1, Addressing_NoneAddressing},
+    {"SBC", 3, Addressing_AbsoluteY},
+    {"NOP", 1, Addressing_NoneAddressing},
+    {"ISB", 3, Addressing_AbsoluteY},
+    {"NOP", 3, Addressing_AbsoluteX},
+    {"SBC", 3, Addressing_AbsoluteX},
+    {"INC", 3, Addressing_AbsoluteX},
+    {"ISB", 3, Addressing_AbsoluteX},
+};
+
+// logging will only EVER log one thing at once, so just use a cache for this
+char* mem_values = nullptr;
+char* addresses = nullptr;
+void write_current_status_log(struct Nes* nes) {
+    //C000  4C F5 C5  JMP $C5F5                       A:00 X:00 Y:00 P:24 SP:FD PPU:  0, 21 CYC:7
+
+    if (mem_values == nullptr) {
+        mem_values = malloc(sizeof(char) * 10);
+        mem_values[9] = '\0';
+    }
+
+    if (addresses == nullptr) {
+        addresses = malloc(sizeof(char) * 27);
+        addresses[26] = '\0';
+    }
+
+    const int instr = nes_read_char(nes, nes->cpu->pc);
+    const int mem1 = nes_read_char(nes, nes->cpu->pc + 1);
+    const int mem2 = nes_read_char(nes, nes->cpu->pc + 2);
+
+    const struct Instruction instruction = instruction_mapping[instr];
+
+    switch (instruction.num_bytes) {
+        default:
+        case 1:
+            sprintf(mem_values, "%02X       ", instr);
+            break;
+        case 2:
+            sprintf(mem_values, "%02X %02X    ", instr, mem1);
+            break;
+        case 3:
+            sprintf(mem_values, "%02X %02X %02X ", instr, mem1, mem2);
+            break;
+    }
+
+
+    // clear address_dump cache
+    for (int i = 0; i < 26; i++) {
+        addresses[i] = ' ';
+    }
+
+   printf(
+        "%04X  %s  %s %s  A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:  0, 00 CYC:%lu\n",
+        nes->cpu->pc,
+        mem_values,
+        instruction.name,
+        addresses,
+        nes->cpu->acc,
+        nes->cpu->x,
+        nes->cpu->y,
+        nes->cpu->p.value,
+        nes->cpu->sp,
+        nes->cpu->total_cycles
+    );
+}

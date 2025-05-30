@@ -13,6 +13,7 @@ add_executable(choco
         cpu.c
         instructions.c
         tests/tests.c
-        tests/cpu-addressing.c)
+        tests/cpu-addressing.c
+        nes-logging.c)
 
 target_link_libraries(choco raylib)

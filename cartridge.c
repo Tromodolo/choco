@@ -150,7 +150,8 @@ inline uint8_t* nes_cartridge_get_addr_ptr(const struct Cartridge* cartridge, ui
         return &cartridge->prg_rom[addr];
     }
 
-    return nullptr;
+    printf("Tried reading non-implemented address %04x\n", addr);
+    return &cartridge->prg_ram[0];
 }
 
 inline uint8_t nes_cartridge_read_char(const struct Cartridge* cartridge, uint16_t addr) {
@@ -166,7 +167,7 @@ inline uint8_t nes_cartridge_read_char(const struct Cartridge* cartridge, uint16
 }
 inline void nes_cartridge_write_char(const struct Cartridge* cartridge, uint16_t addr, uint8_t val) {
     if (addr <= RAM_MIRRORS_END) {
-        if (addr == 0x02)
+        if (addr == 0x02 || addr == 0x03)
             printf("%d\\n", addr);
 
         cartridge->prg_ram[addr & 0x7FF] = val;

@@ -4,6 +4,9 @@
 
 #include "nes-internal.h"
 #include "instructions.h"
+
+#include <stdio.h>
+
 #include "instructions-internal.h"
 
 #include "cartridge.h"
@@ -32,29 +35,30 @@ const int IRQ_VECTOR = 0xFFFE;
 
 const int STACK_START = 0x0100;
 
-void set_zero_and_negative(struct Nes* nes, struct CPU* cpu, uint8_t value) {
+void set_zero_and_negative(struct Nes* nes, struct CPU* cpu, const uint8_t value) {
     cpu->p.flags.zero = value == 0;
     cpu->p.flags.negative = (value & 0x80) == 0x80;
 }
 
-void set_lower_carry(struct Nes* nes, struct CPU* cpu, uint8_t value) {
+void set_lower_carry(struct Nes* nes, struct CPU* cpu, const uint8_t value) {
     cpu->p.flags.carry = (value & 0x01) == 0x01;
 }
 
-void set_higher_carry(struct Nes* nes, struct CPU* cpu, uint8_t value) {
+void set_higher_carry(struct Nes* nes, struct CPU* cpu, const uint8_t value) {
     cpu->p.flags.carry = (value & 0x80) == 0x80;
 }
 
-bool is_page_cross(uint16_t base, uint16_t addr) {
+bool is_page_cross(const uint16_t base, const uint16_t addr) {
     return base & 0xFF00 != addr & 0xFF00;
 }
 
-void branch(struct Nes* nes, struct CPU* cpu, bool condition, uint8_t* addr) {
+void branch(struct Nes* nes, struct CPU* cpu, const bool condition, const uint8_t* addr) {
     if (!condition)
         return;
 
     cpu->waiting_cycles += 1;
-    const uint16_t jump_addr = cpu->pc + *addr + 1;
+    const int8_t offset = (int8_t)(*addr);
+    const uint16_t jump_addr = cpu->pc + offset + 1;
 
     if (is_page_cross(cpu->pc + 1, jump_addr)) {
         cpu->waiting_cycles += 1;
@@ -62,7 +66,7 @@ void branch(struct Nes* nes, struct CPU* cpu, bool condition, uint8_t* addr) {
     cpu->pc = jump_addr;
 }
 
-inline uint8_t* get_address(struct Nes* nes, struct CPU* cpu, enum AddressingMode mode) {
+inline uint8_t* get_address(struct Nes* nes, struct CPU* cpu, const enum AddressingMode mode) {
     switch (mode) {
         case Addressing_NoneAddressing:
             return nullptr;
@@ -73,11 +77,20 @@ inline uint8_t* get_address(struct Nes* nes, struct CPU* cpu, enum AddressingMod
         case Addressing_Relative:
             return nes_get_addr_ptr(nes, cpu->pc);
         case Addressing_ZeroPage:
-            return nes_get_addr_ptr(nes, nes_read_char(nes, cpu->pc));
+        {
+            const uint8_t addr = nes_read_char(nes, cpu->pc);
+            return nes_get_addr_ptr(nes, addr);
+        }
         case Addressing_ZeroPageX:
-            return nes_get_addr_ptr(nes, nes_read_char(nes, cpu->pc) + cpu->x);
+        {
+            const uint8_t addr = nes_read_char(nes, cpu->pc) + cpu->x;
+            return nes_get_addr_ptr(nes, addr);
+        }
         case Addressing_ZeroPageY:
-            return nes_get_addr_ptr(nes, nes_read_char(nes, cpu->pc) + cpu->y);
+        {
+            const uint8_t addr = nes_read_char(nes, cpu->pc) + cpu->y;
+            return nes_get_addr_ptr(nes, addr);
+        }
         case Addressing_Absolute:
             return nes_get_addr_ptr(nes, nes_read_short(nes, cpu->pc));
         case Addressing_AbsoluteX:
@@ -93,7 +106,7 @@ inline uint8_t* get_address(struct Nes* nes, struct CPU* cpu, enum AddressingMod
         case Addressing_AbsoluteY:
         {
             const uint16_t base = nes_read_short(nes, cpu->pc);
-            const uint16_t addr = base + cpu->x;
+            const uint16_t addr = base + cpu->y;
 
             if (is_page_cross(base, addr))
                 cpu->waiting_cycles++;
@@ -108,21 +121,23 @@ inline uint8_t* get_address(struct Nes* nes, struct CPU* cpu, enum AddressingMod
         }
         case Addressing_IndirectX:
         {
-            const uint8_t baseAddr = nes_read_char(nes, cpu->pc);
-            const uint8_t addr = baseAddr + cpu->x;
-            const uint8_t lo = nes_read_char(nes, addr);
-            const uint8_t hi = nes_read_char(nes, addr + 1);
+            const uint8_t base_addr = nes_read_char(nes, cpu->pc);
+            const uint8_t addr_lo = base_addr + cpu->x;
+            const uint8_t addr_hi = addr_lo + 1;
+            const uint8_t lo = nes_read_char(nes, addr_lo);
+            const uint8_t hi = nes_read_char(nes, addr_hi);
             return nes_get_addr_ptr(nes, hi << 8 | lo);
         }
         case Addressing_IndirectY:
         {
-            const uint8_t baseAddr = nes_read_char(nes, cpu->pc);
-            const uint8_t lo = nes_read_char(nes, baseAddr);
-            const uint8_t hi = nes_read_char(nes, baseAddr + 1);
-            const unsigned derefBase = (hi << 8 | lo);
-            const uint16_t deref = derefBase + cpu->y;
+            const uint8_t base_addr_lo = nes_read_char(nes, cpu->pc);
+            const uint8_t base_addr_hi = base_addr_lo + 1;
+            const uint8_t lo = nes_read_char(nes, base_addr_lo);
+            const uint8_t hi = nes_read_char(nes, base_addr_hi);
+            const unsigned deref_base = (hi << 8 | lo);
+            const uint16_t deref = deref_base + cpu->y;
 
-            if (is_page_cross(deref, derefBase))
+            if (is_page_cross(deref, deref_base))
                 cpu->waiting_cycles++;
 
             return nes_get_addr_ptr(nes, deref);
@@ -173,6 +188,7 @@ inline void brk(struct Nes* nes, struct CPU* cpu, uint8_t* addr) {
 
 inline void ora(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     cpu->acc |= *addr;
+    set_zero_and_negative(nes, cpu, cpu->acc);
 }
 
 inline void kil(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
@@ -209,7 +225,7 @@ inline void clc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 }
 
 inline void jsr(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    uint16_t new_pc = cpu->pc + 2;
+    uint16_t new_pc = cpu->pc + 1;
     stack_push(nes, cpu, (new_pc & 0xFF00) >> 8);
     stack_push(nes, cpu, new_pc & 0xFF);
     cpu->pc = nes_read_short(nes, cpu->pc);
@@ -227,20 +243,23 @@ inline void rla(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 inline void bit(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     const uint8_t result = cpu->acc & *addr;
     cpu->p.flags.zero = result == 0;
-    cpu->p.flags.negative = (result & 0x80) >> 7;
-    cpu->p.flags.overflow = (result & 0x40) >> 6;
+    cpu->p.flags.negative = (*addr & 0x80) >> 7;
+    cpu->p.flags.overflow = (*addr & 0x40) >> 6;
 }
 
 inline void rol(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+    const uint8_t old_carry = cpu->p.flags.carry;
     set_higher_carry(nes, cpu, *addr);
     *addr <<= 1;
-    *addr += cpu->p.flags.carry;
+    *addr += old_carry;
     set_zero_and_negative(nes, cpu, *addr);
 }
 
 inline void plp(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    // Masked away break1/break2
-    cpu->p.value = stack_pop(nes, cpu) & 0xCF;
+    // Masked away break1
+    cpu->p.value = stack_pop(nes, cpu);
+    cpu->p.flags.break1 = 0;
+    cpu->p.flags.break2 = 1;
 }
 
 inline void bmi(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
@@ -252,8 +271,10 @@ inline void sec(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 }
 
 inline void rti(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    // Masked away break1/break2
-    cpu->p.value = stack_pop(nes, cpu) & 0xCF;
+    // Masked away break1
+    cpu->p.value = stack_pop(nes, cpu);
+    cpu->p.flags.break1 = 0;
+    cpu->p.flags.break2 = 1;
 
     const uint8_t pc_lo = stack_pop(nes, cpu);
     const uint8_t pc_hi = stack_pop(nes, cpu);
@@ -301,7 +322,7 @@ inline void jmp(struct Nes* nes, struct CPU* cpu, uint8_t* _){
     if ((addr & 0xFF) == 0xFF) {
         const uint8_t lo = nes_read_char(nes, addr);
         const uint8_t hi = nes_read_char(nes, addr & 0xFF00);
-        jmp_addr = nes_read_short(nes, hi << 8 | lo);
+        jmp_addr = hi << 8 | lo;
     } else {
         jmp_addr = nes_read_short(nes, addr);
     }
@@ -321,7 +342,7 @@ inline void rts(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     const uint8_t pc_lo = stack_pop(nes, cpu);
     const uint8_t pc_hi = stack_pop(nes, cpu);
     const uint16_t new_pc = pc_hi << 8 | pc_lo;
-    cpu->pc = new_pc;
+    cpu->pc = new_pc + 1;
 }
 
 inline void adc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
@@ -334,7 +355,7 @@ inline void adc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     // (0x7F ^ 0x81) & (0x02 ^ 0x81) & 0x80;
     // (0xfe) & (0x83) & 0x80 == 0x80
     // Meaning if the sum matches either the sign of the acc or the value, it's not an overflow
-    cpu->p.flags.overflow = ((cpu->acc ^ sum) & (*addr ^ sum) & 0x80) >> 8;
+    cpu->p.flags.overflow = ((cpu->acc ^ sum) & (*addr ^ sum) & 0x80) >> 7;
     cpu->p.flags.carry = sum > 0xFF;
 
     cpu->acc = sum;
@@ -346,14 +367,16 @@ inline void rra(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 }
 
 inline void ror(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+    const uint8_t old_carry = cpu->p.flags.carry;
     set_lower_carry(nes, cpu, *addr);
     *addr >>= 1;
-    *addr += (cpu->p.flags.carry << 7);
+    *addr |= (old_carry << 7);
     set_zero_and_negative(nes, cpu, *addr);
 }
 
 inline void pla(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     cpu->acc = stack_pop(nes, cpu);
+    set_zero_and_negative(nes, cpu, cpu->acc);
 }
 
 inline void arr(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
@@ -527,7 +550,11 @@ inline void cpx(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 }
 
 inline void sbc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    const int sum = cpu->acc - *addr - cpu->p.flags.carry;
+    // a bit strange behavior here but this is how its implemented in hardware:
+    // A + ~M + (C=1)
+    // It can also be A - M - (!C) where !C is inverted carry but the hardware implementation is what i managed to get working
+    const uint8_t added_value = 255 - *addr;
+    const int sum = cpu->acc + added_value + cpu->p.flags.carry;
 
     // Whether or not the subtraction resulted in a signed overflow, 128 -> -127
     // Example
@@ -536,8 +563,8 @@ inline void sbc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     // (0x7F ^ 0x81) & (0x02 ^ 0x81) & 0x80;
     // (0xfe) & (0x83) & 0x80 == 0x80
     // Meaning if the sum matches either the sign of the acc or the value, it's not an overflow
-    cpu->p.flags.overflow = ((cpu->acc ^ sum) & (*addr ^ sum) & 0x80) >> 8;
-    cpu->p.flags.carry = sum < 0xFF;
+    cpu->p.flags.overflow = ((cpu->acc ^ sum) & (added_value ^ sum) & 0x80) >> 7;
+    cpu->p.flags.carry = sum > 0xFF;
 
     cpu->acc = sum;
     set_zero_and_negative(nes, cpu, cpu->acc);

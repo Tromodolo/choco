@@ -12,6 +12,7 @@
 #include "instructions.h"
 #include "nes.h"
 #include "nes-internal.h"
+#include "nes-logging.h"
 
 struct CPU* nes_cpu_init(struct Nes* nes) {
     struct CPU* cpu = malloc(sizeof(struct CPU));
@@ -25,24 +26,31 @@ struct CPU* nes_cpu_init(struct Nes* nes) {
 
     cpu->p.value = 0;
     cpu->p.flags.interrupt_disable = 1;
+    cpu->p.flags.break2 = 1;
 
+    cpu->total_cycles = 7;
     cpu->waiting_cycles = 0;
     cpu->is_stopped = false;
 
-    if(getenv("NESTEST")) {
+    // if(getenv("NESTEST")) {
         cpu->pc = 0xC000;
-    }
+    // }
 
     return cpu;
 }
 
 void nes_cpu_tick(struct Nes* nes) {
     if (!nes->cpu->is_stopped && nes->cpu->waiting_cycles == 0) {
+        if (nes->cpu->total_cycles <= 26554)
+            write_current_status_log(nes);
+
+        // if (nes->cpu->pc == 0xC72A)
+            // printf("123");
+
         const uint8_t opcode = nes_read_char(nes, nes->cpu->pc++);
-
-        // printf("PC: %04x OP: %02x\n", nes->cpu->pc - 1, opcode);
-
         nes_cpu_handle_instruction(nes, nes->cpu, opcode);
+
+        nes->cpu->total_cycles += nes->cpu->waiting_cycles;
     }
     nes->cpu->waiting_cycles--;
 }

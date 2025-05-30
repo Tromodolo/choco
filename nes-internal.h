@@ -72,6 +72,8 @@ struct CPU {
 
     uint8_t current_instruction;
 
+    uint64_t total_cycles;
+
     bool is_stopped;
 
     Flags p;
