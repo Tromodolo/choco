@@ -7,7 +7,6 @@
 #include "nes.h"
 #include "cartridge.h"
 #include "cpu.h"
-#include "nes-internal.h"
 
 struct Nes* nes_init(char* file_path) {
     struct Nes* nes = malloc(sizeof(struct Nes));

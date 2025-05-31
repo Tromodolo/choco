@@ -6,12 +6,8 @@
 #include <stdint.h>
 
 #include "cpu.h"
-
-#include <stdio.h>
-
-#include "instructions.h"
 #include "nes.h"
-#include "nes-internal.h"
+#include "instructions.h"
 #include "nes-logging.h"
 
 struct CPU* nes_cpu_init(struct Nes* nes) {

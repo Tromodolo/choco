@@ -4,12 +4,12 @@
 
 #include <stdlib.h>
 
-#include "../nes-internal.h"
 #include "cpu-addressing.h"
 
 #include <stdio.h>
 
 #include "../cpu.h"
+#include "../cartridge.h"
 #include "../nes.h"
 
 const int TEST_HEADER_SIZE = 0x10;

@@ -7,6 +7,11 @@
 #include <raylib.h>
 #include <stdint.h>
 
+struct Nes {
+    struct Cartridge* cartridge;
+    struct CPU* cpu;
+};
+
 struct Nes* nes_init(char* file_path);
 struct Nes* nes_init_from_buffer(const uint8_t* buffer, const long size);
 void nes_get_samples(void* buffer_data, unsigned int frames, struct Nes* nes, Color* frame_buffer, bool* is_new_frame);

@@ -2,9 +2,9 @@
 // Created by tromo on 5/25/25.
 //
 
-#include "nes-internal.h"
 #include "instructions.h"
 #include "instructions-internal.h"
+#include "cpu.h"
 #include "nes.h"
 
 #define INSTRUCTION(opcode, func, numbytes, cyclecount, addressing) \

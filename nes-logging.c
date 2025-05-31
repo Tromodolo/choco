@@ -3,14 +3,12 @@
 //
 
 #include <stdio.h>
-
-#include "nes-internal.h"
-#include "nes-logging.h"
-
 #include <stdlib.h>
 
-#include "instructions-internal.h"
+#include "cpu.h"
 #include "nes.h"
+#include "nes-logging.h"
+#include "instructions-internal.h"
 
 struct Instruction {
     const char* name;

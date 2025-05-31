@@ -7,9 +7,6 @@
 #include <string.h>
 
 #include "cartridge.h"
-#include "nes-internal.h"
-
-#include "stdint.h"
 
 const int NES_TAG_1 = 0x00;
 const int NES_TAG_2 = 0x01;
