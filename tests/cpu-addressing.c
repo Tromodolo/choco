@@ -66,7 +66,7 @@ bool test_immediate_addressing() {
 
     const int instruction_byte_size = 1;
     success &= nes->cpu->acc == 0b10000000;
-    success &= nes->cpu->p.flags.carry == 1;
+    success &= nes->cpu->p.carry == 1;
     success &= nes->cpu->pc == PRG_CNT_START + instruction_byte_size;
 
     clear_test_object(nes);
@@ -93,7 +93,7 @@ bool test_relative_addressing_condition_true() {
     struct Nes* nes = get_test_object();
     bool success = true;
 
-    nes->cpu->p.flags.carry = 0;
+    nes->cpu->p.carry = 0;
     nes->cartridge->prg_rom[0x0000] = 0x90; // Branch on Carry Clear
     nes->cartridge->prg_rom[0x0001] = (int8_t)40; // Branch on Carry Clear
     nes_cpu_tick(nes);
@@ -109,7 +109,7 @@ bool test_relative_addressing_condition_false() {
     struct Nes* nes = get_test_object();
     bool success = true;
 
-    nes->cpu->p.flags.carry = 1;
+    nes->cpu->p.carry = 1;
     nes->cartridge->prg_rom[0x0000] = 0x90; // Branch on Carry Clear
     nes->cartridge->prg_rom[0x0001] = (int8_t)40; // Branch on Carry Clear
     nes_cpu_tick(nes);

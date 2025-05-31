@@ -21,8 +21,8 @@ struct CPU* nes_cpu_init(struct Nes* nes) {
     cpu->sp = 0xFD;
 
     cpu->p.value = 0;
-    cpu->p.flags.interrupt_disable = 1;
-    cpu->p.flags.break2 = 1;
+    cpu->p.interrupt_disable = 1;
+    cpu->p.break2 = 1;
 
     cpu->total_cycles = 7;
     cpu->waiting_cycles = 0;

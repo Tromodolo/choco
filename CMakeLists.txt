@@ -11,9 +11,10 @@ add_executable(choco
         core.c
         cartridge.c
         cpu.c
+        ppu.c
         instructions.c
+        nes-logging.c
         tests/tests.c
-        tests/cpu-addressing.c
-        nes-logging.c)
+        tests/cpu-addressing.c)
 
 target_link_libraries(choco raylib)

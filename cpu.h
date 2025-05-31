@@ -17,7 +17,7 @@ typedef union
         uint8_t break2 : 1;
         uint8_t overflow : 1;
         uint8_t negative : 1;
-    } flags;
+    };
     uint8_t value;
 } Flags;
 

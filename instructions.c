@@ -31,16 +31,16 @@ const int IRQ_VECTOR = 0xFFFE;
 const int STACK_START = 0x0100;
 
 void set_zero_and_negative(struct Nes* nes, struct CPU* cpu, const uint8_t value) {
-    cpu->p.flags.zero = value == 0;
-    cpu->p.flags.negative = (value & 0x80) == 0x80;
+    cpu->p.zero = value == 0;
+    cpu->p.negative = (value & 0x80) == 0x80;
 }
 
 void set_lower_carry(struct Nes* nes, struct CPU* cpu, const uint8_t value) {
-    cpu->p.flags.carry = (value & 0x01) == 0x01;
+    cpu->p.carry = (value & 0x01) == 0x01;
 }
 
 void set_higher_carry(struct Nes* nes, struct CPU* cpu, const uint8_t value) {
-    cpu->p.flags.carry = (value & 0x80) == 0x80;
+    cpu->p.carry = (value & 0x80) == 0x80;
 }
 
 bool is_page_cross(const uint16_t base, const uint16_t addr) {
@@ -157,10 +157,10 @@ void handle_cpu_interrupt(struct Nes* nes, struct CPU* cpu, enum Interrupt type)
     stack_push(nes, cpu, cpu->pc & 0xFF);
 
     Flags status = cpu->p;
-    status.flags.break1 = 1;
-    status.flags.break2 = 1;
+    status.break1 = 1;
+    status.break2 = 1;
     stack_push(nes, cpu, status.value);
-    cpu->p.flags.interrupt_disable = 1;
+    cpu->p.interrupt_disable = 1;
 
     switch (type) {
         case Interrupt_BRK:
@@ -198,8 +198,8 @@ inline void asl(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 inline void php(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     Flags status = cpu->p;
-    status.flags.break1 = 1;
-    status.flags.break2 = 1;
+    status.break1 = 1;
+    status.break2 = 1;
     stack_push(nes, cpu, status.value);
 }
 
@@ -209,11 +209,11 @@ inline void aac(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 }
 
 inline void bpl(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    branch(nes, cpu, cpu->p.flags.negative == 0, addr);
+    branch(nes, cpu, cpu->p.negative == 0, addr);
 }
 
 inline void clc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    cpu->p.flags.carry = 0;
+    cpu->p.carry = 0;
 }
 
 inline void jsr(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
@@ -230,13 +230,13 @@ inline void and(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 
 inline void bit(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     const uint8_t result = cpu->acc & *addr;
-    cpu->p.flags.zero = result == 0;
-    cpu->p.flags.negative = (*addr & 0x80) >> 7;
-    cpu->p.flags.overflow = (*addr & 0x40) >> 6;
+    cpu->p.zero = result == 0;
+    cpu->p.negative = (*addr & 0x80) >> 7;
+    cpu->p.overflow = (*addr & 0x40) >> 6;
 }
 
 inline void rol(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    const uint8_t old_carry = cpu->p.flags.carry;
+    const uint8_t old_carry = cpu->p.carry;
     set_higher_carry(nes, cpu, *addr);
     *addr <<= 1;
     *addr += old_carry;
@@ -246,23 +246,23 @@ inline void rol(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 inline void plp(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     // Masked away break1
     cpu->p.value = stack_pop(nes, cpu);
-    cpu->p.flags.break1 = 0;
-    cpu->p.flags.break2 = 1;
+    cpu->p.break1 = 0;
+    cpu->p.break2 = 1;
 }
 
 inline void bmi(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    branch(nes, cpu, cpu->p.flags.negative == 1, addr);
+    branch(nes, cpu, cpu->p.negative == 1, addr);
 }
 
 inline void sec(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    cpu->p.flags.carry = 1;
+    cpu->p.carry = 1;
 }
 
 inline void rti(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     // Masked away break1
     cpu->p.value = stack_pop(nes, cpu);
-    cpu->p.flags.break1 = 0;
-    cpu->p.flags.break2 = 1;
+    cpu->p.break1 = 0;
+    cpu->p.break2 = 1;
 
     const uint8_t pc_lo = stack_pop(nes, cpu);
     const uint8_t pc_hi = stack_pop(nes, cpu);
@@ -311,11 +311,11 @@ inline void jmp(struct Nes* nes, struct CPU* cpu, uint8_t* _){
 }
 
 inline void bvc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    branch(nes, cpu, cpu->p.flags.overflow == 0, addr);
+    branch(nes, cpu, cpu->p.overflow == 0, addr);
 }
 
 inline void cli(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    cpu->p.flags.interrupt_disable = 0;
+    cpu->p.interrupt_disable = 0;
 }
 
 inline void rts(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
@@ -326,7 +326,7 @@ inline void rts(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 }
 
 inline void adc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    const int sum = cpu->acc + *addr + cpu->p.flags.carry;
+    const int sum = cpu->acc + *addr + cpu->p.carry;
 
     // Whether or not the addition resulted in a signed overflow, 128 -> -127
     // Example
@@ -335,15 +335,15 @@ inline void adc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     // (0x7F ^ 0x81) & (0x02 ^ 0x81) & 0x80;
     // (0xfe) & (0x83) & 0x80 == 0x80
     // Meaning if the sum matches either the sign of the acc or the value, it's not an overflow
-    cpu->p.flags.overflow = ((cpu->acc ^ sum) & (*addr ^ sum) & 0x80) >> 7;
-    cpu->p.flags.carry = sum > 0xFF;
+    cpu->p.overflow = ((cpu->acc ^ sum) & (*addr ^ sum) & 0x80) >> 7;
+    cpu->p.carry = sum > 0xFF;
 
     cpu->acc = sum;
     set_zero_and_negative(nes, cpu, cpu->acc);
 }
 
 inline void ror(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    const uint8_t old_carry = cpu->p.flags.carry;
+    const uint8_t old_carry = cpu->p.carry;
     set_lower_carry(nes, cpu, *addr);
     *addr >>= 1;
     *addr |= (old_carry << 7);
@@ -356,11 +356,11 @@ inline void pla(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 }
 
 inline void bvs(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    branch(nes, cpu, cpu->p.flags.overflow == 1, addr);
+    branch(nes, cpu, cpu->p.overflow == 1, addr);
 }
 
 inline void sei(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    cpu->p.flags.interrupt_disable = 1;
+    cpu->p.interrupt_disable = 1;
 }
 
 inline void sta(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
@@ -386,7 +386,7 @@ inline void txa(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 }
 
 inline void bcc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    branch(nes, cpu, cpu->p.flags.carry == 0, addr);
+    branch(nes, cpu, cpu->p.carry == 0, addr);
 }
 
 inline void tya(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
@@ -424,11 +424,11 @@ inline void tax(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 }
 
 inline void bcs(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    branch(nes, cpu, cpu->p.flags.carry == 1, addr);
+    branch(nes, cpu, cpu->p.carry == 1, addr);
 }
 
 inline void clv(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    cpu->p.flags.overflow = 0;
+    cpu->p.overflow = 0;
 }
 
 inline void tsx(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
@@ -439,13 +439,13 @@ inline void tsx(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 inline void cpy(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     const uint8_t result = cpu->y - *addr;
     set_zero_and_negative(nes, cpu, result);
-    cpu->p.flags.carry = cpu->y >= *addr;
+    cpu->p.carry = cpu->y >= *addr;
 }
 
 inline void cmp(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     const uint8_t result = cpu->acc - *addr;
     set_zero_and_negative(nes, cpu, result);
-    cpu->p.flags.carry = cpu->acc >= *addr;
+    cpu->p.carry = cpu->acc >= *addr;
 }
 
 inline void dec(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
@@ -464,17 +464,17 @@ inline void dex(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 }
 
 inline void bne(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    branch(nes, cpu, cpu->p.flags.zero == 0, addr);
+    branch(nes, cpu, cpu->p.zero == 0, addr);
 }
 
 inline void cld(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    cpu->p.flags.decimal = 0;
+    cpu->p.decimal = 0;
 }
 
 inline void cpx(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     const uint8_t result = cpu->x - *addr;
     set_zero_and_negative(nes, cpu, result);
-    cpu->p.flags.carry = cpu->x >= *addr;
+    cpu->p.carry = cpu->x >= *addr;
 }
 
 inline void sbc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
@@ -482,7 +482,7 @@ inline void sbc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     // A + ~M + (C=1)
     // It can also be A - M - (!C) where !C is inverted carry but the hardware implementation is what i managed to get working
     const uint8_t added_value = 255 - *addr;
-    const int sum = cpu->acc + added_value + cpu->p.flags.carry;
+    const int sum = cpu->acc + added_value + cpu->p.carry;
 
     // Whether or not the subtraction resulted in a signed overflow, 128 -> -127
     // Example
@@ -491,8 +491,8 @@ inline void sbc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     // (0x7F ^ 0x81) & (0x02 ^ 0x81) & 0x80;
     // (0xfe) & (0x83) & 0x80 == 0x80
     // Meaning if the sum matches either the sign of the acc or the value, it's not an overflow
-    cpu->p.flags.overflow = ((cpu->acc ^ sum) & (added_value ^ sum) & 0x80) >> 7;
-    cpu->p.flags.carry = sum > 0xFF;
+    cpu->p.overflow = ((cpu->acc ^ sum) & (added_value ^ sum) & 0x80) >> 7;
+    cpu->p.carry = sum > 0xFF;
 
     cpu->acc = sum;
     set_zero_and_negative(nes, cpu, cpu->acc);
@@ -513,11 +513,11 @@ inline void nop(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
 }
 
 inline void beq(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    branch(nes, cpu, cpu->p.flags.zero == 1, addr);
+    branch(nes, cpu, cpu->p.zero == 1, addr);
 }
 
 inline void sed(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    cpu->p.flags.decimal = 1;
+    cpu->p.decimal = 1;
 }
 
 inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, uint8_t opcode) {
