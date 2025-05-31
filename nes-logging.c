@@ -1,7 +1,3 @@
-//
-// Created by tromo on 5/30/25.
-//
-
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -278,7 +274,7 @@ const struct Instruction instruction_mapping[] = {
 // logging will only EVER log one thing at once, so just use a cache for this
 char* mem_values = nullptr;
 char* addresses = nullptr;
-void write_current_status_log(struct Nes* nes) {
+void write_current_status_log(const struct Nes* nes) {
     //C000  4C F5 C5  JMP $C5F5                       A:00 X:00 Y:00 P:24 SP:FD PPU:  0, 21 CYC:7
 
     if (mem_values == nullptr) {

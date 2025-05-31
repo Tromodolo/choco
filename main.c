@@ -5,12 +5,12 @@
 #include "core.h"
 #include "tests/tests.h"
 
-const int SCREEN_WIDTH = 800;
-const int SCREEN_HEIGHT = 600;
+constexpr int SCREEN_WIDTH = 800;
+constexpr int SCREEN_HEIGHT = 600;
 
 struct Core* core;
 
-void get_samples(void *bufferData, unsigned int frames){
+void get_samples(void *bufferData, const unsigned int frames){
     short* samples = bufferData;
     for(int i = 0; i < frames; i++) {
         samples[i] = 0;

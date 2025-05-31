@@ -1,7 +1,3 @@
-//
-// Created by tromo on 5/25/25.
-//
-
 #include <stdlib.h>
 
 #include "cpu-addressing.h"
@@ -12,9 +8,9 @@
 #include "../cartridge.h"
 #include "../nes.h"
 
-const int TEST_HEADER_SIZE = 0x10;
-const int PRG_ROM_BANK_END = 0x4000;
-const int PRG_CNT_START = 0x8000;
+constexpr int TEST_HEADER_SIZE = 0x10;
+constexpr int PRG_ROM_BANK_END = 0x4000;
+constexpr int PRG_CNT_START = 0x8000;
 
 #define MAP_TO_PRG_ROM(addr) (addr % PRG_ROM_BANK_END + TEST_HEADER_SIZE)
 
@@ -48,7 +44,7 @@ bool test_none_addressing() {
     nes->cartridge->prg_rom[0x0000] = 0xCA; // DEX
     nes_cpu_tick(nes);
 
-    const int instruction_byte_size = 1;
+    constexpr int instruction_byte_size = 1;
     success &= nes->cpu->x == 0xFF;
     success &= nes->cpu->pc == PRG_CNT_START + instruction_byte_size;
 
@@ -64,7 +60,7 @@ bool test_immediate_addressing() {
     nes->cartridge->prg_rom[0x0000] = 0x0A; // ASL A
     nes_cpu_tick(nes);
 
-    const int instruction_byte_size = 1;
+    constexpr int instruction_byte_size = 1;
     success &= nes->cpu->acc == 0b10000000;
     success &= nes->cpu->p.carry == 1;
     success &= nes->cpu->pc == PRG_CNT_START + instruction_byte_size;
@@ -81,7 +77,7 @@ bool test_acc_addressing() {
     nes->cartridge->prg_rom[0x0001] = 0xCB; // #
     nes_cpu_tick(nes);
 
-    const int instruction_byte_size = 2;
+    constexpr int instruction_byte_size = 2;
     success &= nes->cpu->y == 0xCB;
     success &= nes->cpu->pc == PRG_CNT_START + instruction_byte_size;
 
@@ -98,7 +94,7 @@ bool test_relative_addressing_condition_true() {
     nes->cartridge->prg_rom[0x0001] = (int8_t)40; // Branch on Carry Clear
     nes_cpu_tick(nes);
 
-    const int instruction_byte_size = 2;
+    constexpr int instruction_byte_size = 2;
     success &= nes->cpu->pc == PRG_CNT_START + instruction_byte_size + 40;
 
     clear_test_object(nes);
@@ -114,7 +110,7 @@ bool test_relative_addressing_condition_false() {
     nes->cartridge->prg_rom[0x0001] = (int8_t)40; // Branch on Carry Clear
     nes_cpu_tick(nes);
 
-    const int instruction_byte_size = 2;
+    constexpr int instruction_byte_size = 2;
     success &= nes->cpu->pc == PRG_CNT_START + instruction_byte_size;
 
     clear_test_object(nes);
@@ -132,7 +128,7 @@ bool test_zero_page_addressing() {
 
     nes_cpu_tick(nes);
 
-    const int instruction_byte_size = 2;
+    constexpr int instruction_byte_size = 2;
     success &= nes->cpu->acc == 0x7C;
     success &= nes->cpu->pc == PRG_CNT_START + instruction_byte_size;
 
@@ -152,7 +148,7 @@ bool test_zero_page_addressing_x() {
 
     nes_cpu_tick(nes);
 
-    const int instruction_byte_size = 2;
+    constexpr int instruction_byte_size = 2;
     success &= nes->cpu->acc == 0x7C;
     success &= nes->cpu->pc == PRG_CNT_START + instruction_byte_size;
 
@@ -172,7 +168,7 @@ bool test_zero_page_addressing_y() {
 
     nes_cpu_tick(nes);
 
-    const int instruction_byte_size = 2;
+    constexpr int instruction_byte_size = 2;
     success &= nes->cpu->x == 0x7C;
     success &= nes->cpu->pc == PRG_CNT_START + instruction_byte_size;
 
@@ -192,7 +188,7 @@ bool test_zero_page_absolute() {
 
     nes_cpu_tick(nes);
 
-    const int instruction_byte_size = 3;
+    constexpr int instruction_byte_size = 3;
     success &= nes->cpu->y == 0x7C;
     success &= nes->cpu->pc == PRG_CNT_START + instruction_byte_size;
 
@@ -213,7 +209,7 @@ bool test_zero_page_absolute_x() {
 
     nes_cpu_tick(nes);
 
-    const int instruction_byte_size = 3;
+    constexpr int instruction_byte_size = 3;
     success &= nes->cpu->y == 0x7C;
     success &= nes->cpu->pc == PRG_CNT_START + instruction_byte_size;
 
@@ -234,7 +230,7 @@ bool test_zero_page_absolute_y() {
 
     nes_cpu_tick(nes);
 
-    const int instruction_byte_size = 3;
+    constexpr int instruction_byte_size = 3;
     success &= nes->cpu->x == 0x7C;
     success &= nes->cpu->pc == PRG_CNT_START + instruction_byte_size;
 
@@ -257,7 +253,7 @@ bool test_zero_page_indirect_x() {
 
     nes_cpu_tick(nes);
 
-    const int instruction_byte_size = 2;
+    constexpr int instruction_byte_size = 2;
     success &= nes->cpu->acc == 0x33;
     success &= nes->cpu->pc == PRG_CNT_START + instruction_byte_size;
 
@@ -280,7 +276,7 @@ bool test_zero_page_indirect_y() {
 
     nes_cpu_tick(nes);
 
-    const int instruction_byte_size = 2;
+    constexpr int instruction_byte_size = 2;
     success &= nes->cpu->acc == 0x33;
     success &= nes->cpu->pc == PRG_CNT_START + instruction_byte_size;
 

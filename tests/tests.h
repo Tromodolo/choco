@@ -1,7 +1,3 @@
-//
-// Created by tromo on 5/25/25.
-//
-
 #ifndef TESTS_H
 #define TESTS_H
 

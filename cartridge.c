@@ -1,36 +1,33 @@
-//
-// Created by tromo on 5/24/25.
-//
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "cartridge.h"
 
-const int NES_TAG_1 = 0x00;
-const int NES_TAG_2 = 0x01;
-const int NES_TAG_3 = 0x02;
-const int NES_TAG_4 = 0x03;
+constexpr int NES_TAG_1 = 0x00;
+constexpr int NES_TAG_2 = 0x01;
+constexpr int NES_TAG_2 = 0x01;
+constexpr int NES_TAG_3 = 0x02;
+constexpr int NES_TAG_4 = 0x03;
 
-const int INES_DETECTION = 0x0C;
+constexpr int INES_DETECTION = 0x0C;
 
 // INES
-const int INES_PRG_ROM_SIZE = 0x04;
-const int INES_CHR_ROM_SIZE = 0x05;
-const int INES_CONTROL_1 = 0x06;
-const int INES_CONTROL_2 = 0x07;
-const int INES_PRG_RAM_SIZE = 0x08;
+constexpr int INES_PRG_ROM_SIZE = 0x04;
+constexpr int INES_CHR_ROM_SIZE = 0x05;
+constexpr int INES_CONTROL_1 = 0x06;
+constexpr int INES_CONTROL_2 = 0x07;
+constexpr int INES_PRG_RAM_SIZE = 0x08;
 
-const int INES_PRG_ROM_BANK_SIZE = 0x4000;
-const int INES_CHR_ROM_BANK_SIZE = 0x2000;
-const int INES_PRG_RAM_BANK_SIZE = 0x2000;
+constexpr int INES_PRG_ROM_BANK_SIZE = 0x4000;
+constexpr int INES_CHR_ROM_BANK_SIZE = 0x2000;
+constexpr int INES_PRG_RAM_BANK_SIZE = 0x2000;
 
 // INES 2.0
-const int NES2_TMP = 0x07;
+constexpr int NES2_TMP = 0x07;
 
-const int HEADER_SIZE = 0x10;
-const int TRAINER_SIZE = 0x200;
+constexpr int HEADER_SIZE = 0x10;
+constexpr int TRAINER_SIZE = 0x200;
 
 
 struct Cartridge* nes_cartridge_load_from_file(const char* file_path) {
@@ -40,7 +37,9 @@ struct Cartridge* nes_cartridge_load_from_file(const char* file_path) {
     const long file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    char* file_contents = malloc(file_size * sizeof(char));
+    uint8_t* file_contents = malloc(file_size * sizeof(uint8_t));
+    if (!file_contents)
+        return nullptr;
 
     for(int i = 0; i < file_size; i++) {
         fread(file_contents + i, 1, 1, file);
@@ -133,10 +132,10 @@ void nes_cartridge_free(struct Cartridge* cartridge) {
     free(cartridge);
 }
 
-const uint16_t PRG_ROM_START = 0x8000;
-const uint16_t PRG_ROM_END = 0xFFFF;
-const uint16_t RAM_MIRRORS_END = 0x1fff;
-const uint16_t PPU_MIRRORS_END = 0x3fff;
+constexpr uint16_t PRG_ROM_START = 0x8000;
+constexpr uint16_t PRG_ROM_END = 0xFFFF;
+constexpr uint16_t RAM_MIRRORS_END = 0x1fff;
+constexpr uint16_t PPU_MIRRORS_END = 0x3fff;
 
 inline uint8_t* nes_cartridge_get_addr_ptr(const struct Cartridge* cartridge, uint16_t addr) {
     if (addr <= RAM_MIRRORS_END) {
@@ -162,7 +161,7 @@ inline uint8_t nes_cartridge_read_char(const struct Cartridge* cartridge, uint16
 
     return 0;
 }
-inline void nes_cartridge_write_char(const struct Cartridge* cartridge, uint16_t addr, uint8_t val) {
+inline void nes_cartridge_write_char(const struct Cartridge* cartridge, uint16_t addr, const uint8_t val) {
     if (addr <= RAM_MIRRORS_END) {
         if (addr == 0x02 || addr == 0x03)
             printf("%d\\n", addr);

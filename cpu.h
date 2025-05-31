@@ -1,7 +1,3 @@
-//
-// Created by tromo on 5/25/25.
-//
-
 #ifndef CPU_H
 #define CPU_H
 #include "nes.h"
@@ -39,7 +35,7 @@ struct CPU {
     Flags p;
 };
 
-struct CPU* nes_cpu_init(struct Nes* nes);
+struct CPU* nes_cpu_init(const struct Nes* nes);
 void nes_cpu_tick(struct Nes* nes);
 void nes_cpu_free(struct CPU* cpu);
 

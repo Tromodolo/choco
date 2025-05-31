@@ -1,7 +1,3 @@
-//
-// Created by tromo on 5/24/25.
-//
-
 #ifndef CARTRIDGE_H
 #define CARTRIDGE_H
 #include <stdint.h>

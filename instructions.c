@@ -1,7 +1,3 @@
-//
-// Created by tromo on 5/25/25.
-//
-
 #include "instructions.h"
 #include "instructions-internal.h"
 #include "cpu.h"
@@ -24,11 +20,11 @@ enum Interrupt {
     Interrupt_IRQ,
 };
 
-const int NMI_VECTOR = 0xFFFA;
-const int BRK_VECTOR = 0xFFFE;
-const int IRQ_VECTOR = 0xFFFE;
+constexpr int NMI_VECTOR = 0xFFFA;
+constexpr int BRK_VECTOR = 0xFFFE;
+constexpr int IRQ_VECTOR = 0xFFFE;
 
-const int STACK_START = 0x0100;
+constexpr int STACK_START = 0x0100;
 
 void set_zero_and_negative(struct Nes* nes, struct CPU* cpu, const uint8_t value) {
     cpu->p.zero = value == 0;
@@ -61,7 +57,7 @@ void branch(struct Nes* nes, struct CPU* cpu, const bool condition, const uint8_
     cpu->pc = jump_addr;
 }
 
-inline uint8_t* get_address(struct Nes* nes, struct CPU* cpu, const enum AddressingMode mode) {
+inline uint8_t* get_address(const struct Nes* nes, struct CPU* cpu, const enum AddressingMode mode) {
     switch (mode) {
         case Addressing_NoneAddressing:
             return nullptr;
@@ -142,17 +138,17 @@ inline uint8_t* get_address(struct Nes* nes, struct CPU* cpu, const enum Address
     }
 }
 
-uint8_t stack_pop(struct Nes* nes, struct CPU* cpu) {
+uint8_t stack_pop(const struct Nes* nes, struct CPU* cpu) {
     cpu->sp++;
     return nes_read_char(nes, STACK_START + cpu->sp);
 }
 
-void stack_push(struct Nes* nes, struct CPU* cpu, uint8_t val) {
+void stack_push(const struct Nes* nes, struct CPU* cpu, const uint8_t val) {
     nes_write_char(nes, STACK_START + cpu->sp, val);
     cpu->sp--;
 }
 
-void handle_cpu_interrupt(struct Nes* nes, struct CPU* cpu, enum Interrupt type) {
+void handle_cpu_interrupt(const struct Nes* nes, struct CPU* cpu, const enum Interrupt type) {
     stack_push(nes, cpu, (cpu->pc & 0xFF00) >> 8);
     stack_push(nes, cpu, cpu->pc & 0xFF);
 
@@ -177,11 +173,11 @@ void handle_cpu_interrupt(struct Nes* nes, struct CPU* cpu, enum Interrupt type)
     }
 }
 
-inline void brk(struct Nes* nes, struct CPU* cpu, uint8_t* addr) {
+inline void brk(const struct Nes* nes, struct CPU* cpu, uint8_t* addr) {
     handle_cpu_interrupt(nes, cpu, Interrupt_BRK);
 }
 
-inline void ora(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void ora(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     cpu->acc |= *addr;
     set_zero_and_negative(nes, cpu, cpu->acc);
 }
@@ -196,19 +192,19 @@ inline void asl(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     set_zero_and_negative(nes, cpu, *addr);
 }
 
-inline void php(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void php(const struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     Flags status = cpu->p;
     status.break1 = 1;
     status.break2 = 1;
     stack_push(nes, cpu, status.value);
 }
 
-inline void aac(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void aac(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     and(nes, cpu, addr);
     set_higher_carry(nes, cpu, cpu->acc);
 }
 
-inline void bpl(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void bpl(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     branch(nes, cpu, cpu->p.negative == 0, addr);
 }
 
@@ -216,19 +212,19 @@ inline void clc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     cpu->p.carry = 0;
 }
 
-inline void jsr(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void jsr(const struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     uint16_t new_pc = cpu->pc + 1;
     stack_push(nes, cpu, (new_pc & 0xFF00) >> 8);
     stack_push(nes, cpu, new_pc & 0xFF);
     cpu->pc = nes_read_short(nes, cpu->pc);
 }
 
-inline void and(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void and(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     cpu->acc &= *addr;
     set_zero_and_negative(nes, cpu, cpu->acc);
 }
 
-inline void bit(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void bit(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     const uint8_t result = cpu->acc & *addr;
     cpu->p.zero = result == 0;
     cpu->p.negative = (*addr & 0x80) >> 7;
@@ -243,14 +239,14 @@ inline void rol(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     set_zero_and_negative(nes, cpu, *addr);
 }
 
-inline void plp(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void plp(const struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     // Masked away break1
     cpu->p.value = stack_pop(nes, cpu);
     cpu->p.break1 = 0;
     cpu->p.break2 = 1;
 }
 
-inline void bmi(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void bmi(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     branch(nes, cpu, cpu->p.negative == 1, addr);
 }
 
@@ -258,7 +254,7 @@ inline void sec(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     cpu->p.carry = 1;
 }
 
-inline void rti(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void rti(const struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     // Masked away break1
     cpu->p.value = stack_pop(nes, cpu);
     cpu->p.break1 = 0;
@@ -269,7 +265,7 @@ inline void rti(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     cpu->pc = pc_hi << 8 | pc_lo;
 }
 
-inline void eor(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void eor(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     cpu->acc ^= *addr;
     set_zero_and_negative(nes, cpu, cpu->acc);
 }
@@ -280,11 +276,11 @@ inline void lsr(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     set_zero_and_negative(nes, cpu, *addr);
 }
 
-inline void pha(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void pha(const struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     stack_push(nes, cpu, cpu->acc);
 }
 
-inline void jmp(struct Nes* nes, struct CPU* cpu, uint8_t* _){
+inline void jmp(const struct Nes* nes, struct CPU* cpu, uint8_t* _){
     // absolute addressing
     if (cpu->current_instruction == 0x4C) {
         cpu->pc = nes_read_short(nes, cpu->pc);
@@ -310,7 +306,7 @@ inline void jmp(struct Nes* nes, struct CPU* cpu, uint8_t* _){
     cpu->pc = jmp_addr;
 }
 
-inline void bvc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void bvc(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     branch(nes, cpu, cpu->p.overflow == 0, addr);
 }
 
@@ -318,14 +314,14 @@ inline void cli(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     cpu->p.interrupt_disable = 0;
 }
 
-inline void rts(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void rts(const struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     const uint8_t pc_lo = stack_pop(nes, cpu);
     const uint8_t pc_hi = stack_pop(nes, cpu);
     const uint16_t new_pc = pc_hi << 8 | pc_lo;
     cpu->pc = new_pc + 1;
 }
 
-inline void adc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void adc(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     const int sum = cpu->acc + *addr + cpu->p.carry;
 
     // Whether or not the addition resulted in a signed overflow, 128 -> -127
@@ -355,7 +351,7 @@ inline void pla(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     set_zero_and_negative(nes, cpu, cpu->acc);
 }
 
-inline void bvs(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void bvs(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     branch(nes, cpu, cpu->p.overflow == 1, addr);
 }
 
@@ -363,15 +359,15 @@ inline void sei(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     cpu->p.interrupt_disable = 1;
 }
 
-inline void sta(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void sta(struct Nes* nes, const struct CPU* cpu, uint8_t* addr){
     *addr = cpu->acc;
 }
 
-inline void sty(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void sty(struct Nes* nes, const struct CPU* cpu, uint8_t* addr){
     *addr = cpu->y;
 }
 
-inline void stx(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void stx(struct Nes* nes, const struct CPU* cpu, uint8_t* addr){
     *addr = cpu->x;
 }
 
@@ -385,7 +381,7 @@ inline void txa(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     set_zero_and_negative(nes, cpu, cpu->acc);
 }
 
-inline void bcc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void bcc(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     branch(nes, cpu, cpu->p.carry == 0, addr);
 }
 
@@ -398,17 +394,17 @@ inline void txs(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     cpu->sp = cpu->x;
 }
 
-inline void ldy(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void ldy(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     cpu->y = *addr;
     set_zero_and_negative(nes,cpu, cpu->y);
 }
 
-inline void lda(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void lda(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     cpu->acc = *addr;
     set_zero_and_negative(nes, cpu, cpu->acc);
 }
 
-inline void ldx(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void ldx(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     cpu->x = *addr;
     set_zero_and_negative(nes, cpu, cpu->x);
 }
@@ -423,7 +419,7 @@ inline void tax(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     set_zero_and_negative(nes, cpu, cpu->x);
 }
 
-inline void bcs(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void bcs(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     branch(nes, cpu, cpu->p.carry == 1, addr);
 }
 
@@ -436,13 +432,13 @@ inline void tsx(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     set_zero_and_negative(nes, cpu, cpu->x);
 }
 
-inline void cpy(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void cpy(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     const uint8_t result = cpu->y - *addr;
     set_zero_and_negative(nes, cpu, result);
     cpu->p.carry = cpu->y >= *addr;
 }
 
-inline void cmp(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void cmp(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     const uint8_t result = cpu->acc - *addr;
     set_zero_and_negative(nes, cpu, result);
     cpu->p.carry = cpu->acc >= *addr;
@@ -463,7 +459,7 @@ inline void dex(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     set_zero_and_negative(nes, cpu, cpu->x);
 }
 
-inline void bne(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void bne(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     branch(nes, cpu, cpu->p.zero == 0, addr);
 }
 
@@ -471,13 +467,13 @@ inline void cld(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     cpu->p.decimal = 0;
 }
 
-inline void cpx(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void cpx(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     const uint8_t result = cpu->x - *addr;
     set_zero_and_negative(nes, cpu, result);
     cpu->p.carry = cpu->x >= *addr;
 }
 
-inline void sbc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void sbc(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     // a bit strange behavior here but this is how its implemented in hardware:
     // A + ~M + (C=1)
     // It can also be A - M - (!C) where !C is inverted carry but the hardware implementation is what i managed to get working
@@ -512,7 +508,7 @@ inline void nop(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     // nothing here lol
 }
 
-inline void beq(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void beq(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     branch(nes, cpu, cpu->p.zero == 1, addr);
 }
 
@@ -520,7 +516,7 @@ inline void sed(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     cpu->p.decimal = 1;
 }
 
-inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, uint8_t opcode) {
+inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, const uint8_t opcode) {
     switch (opcode) {
         INSTRUCTION(0x00, brk, 1, 7, Addressing_NoneAddressing)
         INSTRUCTION(0x01, ora, 2, 6, Addressing_IndirectX)

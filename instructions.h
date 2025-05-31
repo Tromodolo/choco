@@ -1,7 +1,3 @@
-//
-// Created by tromo on 5/25/25.
-//
-
 #ifndef INSTRUCTIONS_H
 #define INSTRUCTIONS_H
 #include <stdint.h>

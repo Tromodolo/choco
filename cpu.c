@@ -1,7 +1,3 @@
-//
-// Created by tromo on 5/25/25.
-//
-
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -10,7 +6,7 @@
 #include "instructions.h"
 #include "nes-logging.h"
 
-struct CPU* nes_cpu_init(struct Nes* nes) {
+struct CPU* nes_cpu_init(const struct Nes* nes) {
     struct CPU* cpu = malloc(sizeof(struct CPU));
 
     cpu->acc = 0;

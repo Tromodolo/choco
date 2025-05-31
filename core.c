@@ -1,13 +1,9 @@
-//
-// Created by tromo on 5/24/25.
-//
-
 #include <stdlib.h>
 
 #include "core.h"
 #include "nes.h"
 
-inline struct Core* get_core_for_file(char* file_path) {
+inline struct Core* get_core_for_file(const char* file_path) {
     struct Core* core = malloc(sizeof(struct Core));
 
     core->emu = nes_init(file_path);
@@ -23,7 +19,7 @@ inline struct Core* get_core_for_file(char* file_path) {
     return core;
 }
 
-void core_audio_callback(struct Core* core, void *buffer_data, unsigned int frames) {
+void core_audio_callback(struct Core* core, void *buffer_data, const unsigned int frames) {
     bool is_new_frame = false;
     nes_get_samples(buffer_data, frames, core->emu, core->frame_buffer, &is_new_frame);
 
