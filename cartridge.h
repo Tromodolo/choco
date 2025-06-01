@@ -2,6 +2,11 @@
 #define CARTRIDGE_H
 #include <stdint.h>
 
+constexpr uint16_t PRG_ROM_START = 0x8000;
+constexpr uint16_t PRG_ROM_END = 0xFFFF;
+constexpr uint16_t RAM_MIRRORS_END = 0x1fff;
+constexpr uint16_t PPU_MIRRORS_END = 0x3fff;
+
 //
 // Cartridge
 //

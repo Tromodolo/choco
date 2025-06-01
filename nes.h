@@ -6,6 +6,7 @@
 struct Nes {
     struct Cartridge* cartridge;
     struct CPU* cpu;
+    struct PPU* ppu;
 };
 
 struct Nes* nes_init(const char* file_path);

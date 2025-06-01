@@ -25,7 +25,7 @@ struct CPU* nes_cpu_init(const struct Nes* nes) {
     cpu->is_stopped = false;
 
     // if(getenv("NESTEST")) {
-        cpu->pc = 0xC000;
+        //cpu->pc = 0xC000;
     // }
 
     return cpu;

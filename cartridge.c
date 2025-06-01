@@ -6,7 +6,6 @@
 
 constexpr int NES_TAG_1 = 0x00;
 constexpr int NES_TAG_2 = 0x01;
-constexpr int NES_TAG_2 = 0x01;
 constexpr int NES_TAG_3 = 0x02;
 constexpr int NES_TAG_4 = 0x03;
 
@@ -131,11 +130,6 @@ void nes_cartridge_free(struct Cartridge* cartridge) {
     free(cartridge->chr_rom);
     free(cartridge);
 }
-
-constexpr uint16_t PRG_ROM_START = 0x8000;
-constexpr uint16_t PRG_ROM_END = 0xFFFF;
-constexpr uint16_t RAM_MIRRORS_END = 0x1fff;
-constexpr uint16_t PPU_MIRRORS_END = 0x3fff;
 
 inline uint8_t* nes_cartridge_get_addr_ptr(const struct Cartridge* cartridge, uint16_t addr) {
     if (addr <= RAM_MIRRORS_END) {
