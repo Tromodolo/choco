@@ -7,7 +7,9 @@
 case opcode: {\
     cpu->current_instruction = opcode; \
     cpu->pc_pre = cpu->pc; \
-    func(nes, cpu, get_address(nes, cpu, addressing)); \
+    cpu->read_tmp = get_address(nes, cpu, addressing); \
+    func(nes, cpu, addressing); \
+    write_address(nes, cpu, cpu->read_tmp, addressing); \
     if (cpu->pc == cpu->pc_pre)\
         cpu->pc += numbytes - 1;\
     cpu->waiting_cycles += cyclecount;\
@@ -43,12 +45,12 @@ bool is_page_cross(const uint16_t base, const uint16_t addr) {
     return base & 0xFF00 != addr & 0xFF00;
 }
 
-void branch(struct Nes* nes, struct CPU* cpu, const bool condition, const uint8_t* addr) {
+void branch(struct Nes* nes, struct CPU* cpu, const bool condition, const uint8_t value) {
     if (!condition)
         return;
 
     cpu->waiting_cycles += 1;
-    const int8_t offset = (int8_t)(*addr);
+    const int8_t offset = (int8_t)(value);
     const uint16_t jump_addr = cpu->pc + offset + 1;
 
     if (is_page_cross(cpu->pc + 1, jump_addr)) {
@@ -57,33 +59,34 @@ void branch(struct Nes* nes, struct CPU* cpu, const bool condition, const uint8_
     cpu->pc = jump_addr;
 }
 
-inline uint8_t* get_address(const struct Nes* nes, struct CPU* cpu, const enum AddressingMode mode) {
+// I don't care how stupid this and the write_address solution is with read_tmp, so don't @ me
+inline uint8_t get_address(const struct Nes* nes, struct CPU* cpu, const enum AddressingMode mode) {
     switch (mode) {
         case Addressing_NoneAddressing:
-            return nullptr;
+            return 0;
         case Addressing_Immediate:
-            return nes_get_addr_ptr(nes, cpu->pc);
+            return nes_read_char(nes, cpu->pc);
         case Addressing_Accumulator:
-            return &cpu->acc;
+            return cpu->acc;
         case Addressing_Relative:
-            return nes_get_addr_ptr(nes, cpu->pc);
+            return nes_read_char(nes, cpu->pc);
         case Addressing_ZeroPage:
         {
             const uint8_t addr = nes_read_char(nes, cpu->pc);
-            return nes_get_addr_ptr(nes, addr);
+            return nes_read_char(nes, addr);
         }
         case Addressing_ZeroPageX:
         {
             const uint8_t addr = nes_read_char(nes, cpu->pc) + cpu->x;
-            return nes_get_addr_ptr(nes, addr);
+            return nes_read_char(nes, addr);
         }
         case Addressing_ZeroPageY:
         {
             const uint8_t addr = nes_read_char(nes, cpu->pc) + cpu->y;
-            return nes_get_addr_ptr(nes, addr);
+            return nes_read_char(nes, addr);
         }
         case Addressing_Absolute:
-            return nes_get_addr_ptr(nes, nes_read_short(nes, cpu->pc));
+            return nes_read_char(nes, nes_read_short(nes, cpu->pc));
         case Addressing_AbsoluteX:
         {
             const uint16_t base = nes_read_short(nes, cpu->pc);
@@ -92,7 +95,7 @@ inline uint8_t* get_address(const struct Nes* nes, struct CPU* cpu, const enum A
             if (is_page_cross(base, addr))
                 cpu->waiting_cycles++;
 
-            return nes_get_addr_ptr(nes, addr);
+            return nes_read_char(nes, addr);
         }
         case Addressing_AbsoluteY:
         {
@@ -102,13 +105,13 @@ inline uint8_t* get_address(const struct Nes* nes, struct CPU* cpu, const enum A
             if (is_page_cross(base, addr))
                 cpu->waiting_cycles++;
 
-            return nes_get_addr_ptr(nes, addr);
+            return nes_read_char(nes, addr);
         }
         case Addressing_Indirect:
         {
             // NOTE: This is only needed for JMP, and because it needs to get a 16-bit address to jump to,
             // it's not posible to handle here, so i'm just returning null
-            return nullptr;
+            return 0;
         }
         case Addressing_IndirectX:
         {
@@ -117,7 +120,7 @@ inline uint8_t* get_address(const struct Nes* nes, struct CPU* cpu, const enum A
             const uint8_t addr_hi = addr_lo + 1;
             const uint8_t lo = nes_read_char(nes, addr_lo);
             const uint8_t hi = nes_read_char(nes, addr_hi);
-            return nes_get_addr_ptr(nes, hi << 8 | lo);
+            return nes_read_char(nes, hi << 8 | lo);
         }
         case Addressing_IndirectY:
         {
@@ -131,10 +134,90 @@ inline uint8_t* get_address(const struct Nes* nes, struct CPU* cpu, const enum A
             if (is_page_cross(deref, deref_base))
                 cpu->waiting_cycles++;
 
-            return nes_get_addr_ptr(nes, deref);
+            return nes_read_char(nes, deref);
         }
         default:
-            return nullptr;
+            return 0;
+    }
+}
+
+inline void write_address(const struct Nes* nes, struct CPU* cpu, const uint8_t val, const enum AddressingMode mode) {
+    switch (mode) {
+        case Addressing_NoneAddressing:
+            return;
+        case Addressing_Immediate:
+            nes_write_char(nes, cpu->pc, val);
+            return;
+        case Addressing_Accumulator:
+            cpu->acc = val;
+            return;
+        case Addressing_Relative:
+            nes_write_char(nes, cpu->pc, val);
+            return;
+        case Addressing_ZeroPage:
+        {
+            const uint8_t addr = nes_read_char(nes, cpu->pc);
+            nes_write_char(nes, addr, val);
+            return;
+        }
+        case Addressing_ZeroPageX:
+        {
+            const uint8_t addr = nes_read_char(nes, cpu->pc) + cpu->x;
+            nes_write_char(nes, addr, val);
+            return;
+        }
+        case Addressing_ZeroPageY:
+        {
+            const uint8_t addr = nes_read_char(nes, cpu->pc) + cpu->y;
+            nes_write_char(nes, addr, val);
+            return;
+        }
+        case Addressing_Absolute:
+            nes_write_char(nes, nes_read_short(nes, cpu->pc), val);
+            return;
+        case Addressing_AbsoluteX:
+        {
+            const uint16_t base = nes_read_short(nes, cpu->pc);
+            const uint16_t addr = base + cpu->x;
+            nes_write_char(nes, addr, val);
+            return;
+        }
+        case Addressing_AbsoluteY:
+        {
+            const uint16_t base = nes_read_short(nes, cpu->pc);
+            const uint16_t addr = base + cpu->y;
+            nes_write_char(nes, addr, val);
+            return;
+        }
+        case Addressing_Indirect:
+        {
+            // NOTE: This is only needed for JMP, and because it needs to get a 16-bit address to jump to,
+            // it's not posible to handle here, so i'm just returning null
+            return;
+        }
+        case Addressing_IndirectX:
+        {
+            const uint8_t base_addr = nes_read_char(nes, cpu->pc);
+            const uint8_t addr_lo = base_addr + cpu->x;
+            const uint8_t addr_hi = addr_lo + 1;
+            const uint8_t lo = nes_read_char(nes, addr_lo);
+            const uint8_t hi = nes_read_char(nes, addr_hi);
+            nes_write_char(nes, hi << 8 | lo, val);
+            return;
+        }
+        case Addressing_IndirectY:
+        {
+            const uint8_t base_addr_lo = nes_read_char(nes, cpu->pc);
+            const uint8_t base_addr_hi = base_addr_lo + 1;
+            const uint8_t lo = nes_read_char(nes, base_addr_lo);
+            const uint8_t hi = nes_read_char(nes, base_addr_hi);
+            const unsigned deref_base = (hi << 8 | lo);
+            const uint16_t deref = deref_base + cpu->y;
+            nes_write_char(nes, deref, val);
+            return;
+        }
+        default:
+            return;
     }
 }
 
@@ -173,88 +256,88 @@ void handle_cpu_interrupt(const struct Nes* nes, struct CPU* cpu, const enum Int
     }
 }
 
-inline void brk(const struct Nes* nes, struct CPU* cpu, uint8_t* addr) {
+inline void brk(const struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing) {
     handle_cpu_interrupt(nes, cpu, Interrupt_BRK);
 }
 
-inline void ora(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
-    cpu->acc |= *addr;
+inline void ora(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    cpu->acc |= cpu->read_tmp;
     set_zero_and_negative(nes, cpu, cpu->acc);
 }
 
-inline void kil(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void kil(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->is_stopped = true;
 }
 
-inline void asl(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    set_higher_carry(nes, cpu, *addr);
-    *addr <<= 1;
-    set_zero_and_negative(nes, cpu, *addr);
+inline void asl(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    set_higher_carry(nes, cpu, cpu->read_tmp);
+    cpu->read_tmp <<= 1;
+    set_zero_and_negative(nes, cpu, cpu->read_tmp);
 }
 
-inline void php(const struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void php(const struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     Flags status = cpu->p;
     status.break1 = 1;
     status.break2 = 1;
     stack_push(nes, cpu, status.value);
 }
 
-inline void aac(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
-    and(nes, cpu, addr);
+inline void aac(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    and(nes, cpu, cpu->read_tmp);
     set_higher_carry(nes, cpu, cpu->acc);
 }
 
-inline void bpl(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
-    branch(nes, cpu, cpu->p.negative == 0, addr);
+inline void bpl(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    branch(nes, cpu, cpu->p.negative == 0, cpu->read_tmp);
 }
 
-inline void clc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void clc(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->p.carry = 0;
 }
 
-inline void jsr(const struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void jsr(const struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     uint16_t new_pc = cpu->pc + 1;
     stack_push(nes, cpu, (new_pc & 0xFF00) >> 8);
     stack_push(nes, cpu, new_pc & 0xFF);
     cpu->pc = nes_read_short(nes, cpu->pc);
 }
 
-inline void and(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
-    cpu->acc &= *addr;
+inline void and(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    cpu->acc &= cpu->read_tmp;
     set_zero_and_negative(nes, cpu, cpu->acc);
 }
 
-inline void bit(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
-    const uint8_t result = cpu->acc & *addr;
+inline void bit(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    const uint8_t result = cpu->acc & cpu->read_tmp;
     cpu->p.zero = result == 0;
-    cpu->p.negative = (*addr & 0x80) >> 7;
-    cpu->p.overflow = (*addr & 0x40) >> 6;
+    cpu->p.negative = (cpu->read_tmp & 0x80) >> 7;
+    cpu->p.overflow = (cpu->read_tmp & 0x40) >> 6;
 }
 
-inline void rol(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void rol(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     const uint8_t old_carry = cpu->p.carry;
-    set_higher_carry(nes, cpu, *addr);
-    *addr <<= 1;
-    *addr += old_carry;
-    set_zero_and_negative(nes, cpu, *addr);
+    set_higher_carry(nes, cpu, cpu->read_tmp);
+    cpu->read_tmp <<= 1;
+    cpu->read_tmp += old_carry;
+    set_zero_and_negative(nes, cpu, cpu->read_tmp);
 }
 
-inline void plp(const struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void plp(const struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     // Masked away break1
     cpu->p.value = stack_pop(nes, cpu);
     cpu->p.break1 = 0;
     cpu->p.break2 = 1;
 }
 
-inline void bmi(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
-    branch(nes, cpu, cpu->p.negative == 1, addr);
+inline void bmi(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    branch(nes, cpu, cpu->p.negative == 1, cpu->read_tmp);
 }
 
-inline void sec(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void sec(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->p.carry = 1;
 }
 
-inline void rti(const struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void rti(const struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     // Masked away break1
     cpu->p.value = stack_pop(nes, cpu);
     cpu->p.break1 = 0;
@@ -265,22 +348,22 @@ inline void rti(const struct Nes* nes, struct CPU* cpu, uint8_t* addr){
     cpu->pc = pc_hi << 8 | pc_lo;
 }
 
-inline void eor(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
-    cpu->acc ^= *addr;
+inline void eor(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    cpu->acc ^= cpu->read_tmp;
     set_zero_and_negative(nes, cpu, cpu->acc);
 }
 
-inline void lsr(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    set_lower_carry(nes, cpu, *addr);
-    *addr >>= 1;
-    set_zero_and_negative(nes, cpu, *addr);
+inline void lsr(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    set_lower_carry(nes, cpu, cpu->read_tmp);
+    cpu->read_tmp >>= 1;
+    set_zero_and_negative(nes, cpu, cpu->read_tmp);
 }
 
-inline void pha(const struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void pha(const struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     stack_push(nes, cpu, cpu->acc);
 }
 
-inline void jmp(const struct Nes* nes, struct CPU* cpu, uint8_t* _){
+inline void jmp(const struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     // absolute addressing
     if (cpu->current_instruction == 0x4C) {
         cpu->pc = nes_read_short(nes, cpu->pc);
@@ -306,178 +389,178 @@ inline void jmp(const struct Nes* nes, struct CPU* cpu, uint8_t* _){
     cpu->pc = jmp_addr;
 }
 
-inline void bvc(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
-    branch(nes, cpu, cpu->p.overflow == 0, addr);
+inline void bvc(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    branch(nes, cpu, cpu->p.overflow == 0, cpu->read_tmp);
 }
 
-inline void cli(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void cli(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->p.interrupt_disable = 0;
 }
 
-inline void rts(const struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void rts(const struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     const uint8_t pc_lo = stack_pop(nes, cpu);
     const uint8_t pc_hi = stack_pop(nes, cpu);
     const uint16_t new_pc = pc_hi << 8 | pc_lo;
     cpu->pc = new_pc + 1;
 }
 
-inline void adc(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
-    const int sum = cpu->acc + *addr + cpu->p.carry;
+inline void adc(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    const int sum = cpu->acc + cpu->read_tmp + cpu->p.carry;
 
     // Whether or not the addition resulted in a signed overflow, 128 -> -127
     // Example
     // Acc = 0x7F
-    // *addr = 2
+    // cpu->read_tmp = 2
     // (0x7F ^ 0x81) & (0x02 ^ 0x81) & 0x80;
     // (0xfe) & (0x83) & 0x80 == 0x80
     // Meaning if the sum matches either the sign of the acc or the value, it's not an overflow
-    cpu->p.overflow = ((cpu->acc ^ sum) & (*addr ^ sum) & 0x80) >> 7;
+    cpu->p.overflow = ((cpu->acc ^ sum) & (cpu->read_tmp ^ sum) & 0x80) >> 7;
     cpu->p.carry = sum > 0xFF;
 
     cpu->acc = sum;
     set_zero_and_negative(nes, cpu, cpu->acc);
 }
 
-inline void ror(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void ror(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     const uint8_t old_carry = cpu->p.carry;
-    set_lower_carry(nes, cpu, *addr);
-    *addr >>= 1;
-    *addr |= (old_carry << 7);
-    set_zero_and_negative(nes, cpu, *addr);
+    set_lower_carry(nes, cpu, cpu->read_tmp);
+    cpu->read_tmp >>= 1;
+    cpu->read_tmp |= (old_carry << 7);
+    set_zero_and_negative(nes, cpu, cpu->read_tmp);
 }
 
-inline void pla(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void pla(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->acc = stack_pop(nes, cpu);
     set_zero_and_negative(nes, cpu, cpu->acc);
 }
 
-inline void bvs(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
-    branch(nes, cpu, cpu->p.overflow == 1, addr);
+inline void bvs(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    branch(nes, cpu, cpu->p.overflow == 1, cpu->read_tmp);
 }
 
-inline void sei(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void sei(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->p.interrupt_disable = 1;
 }
 
-inline void sta(struct Nes* nes, const struct CPU* cpu, uint8_t* addr){
-    *addr = cpu->acc;
+inline void sta(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    cpu->read_tmp = cpu->acc;
 }
 
-inline void sty(struct Nes* nes, const struct CPU* cpu, uint8_t* addr){
-    *addr = cpu->y;
+inline void sty(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    cpu->read_tmp = cpu->y;
 }
 
-inline void stx(struct Nes* nes, const struct CPU* cpu, uint8_t* addr){
-    *addr = cpu->x;
+inline void stx(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    cpu->read_tmp = cpu->x;
 }
 
-inline void dey(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void dey(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->y--;
     set_zero_and_negative(nes, cpu, cpu->y);
 }
 
-inline void txa(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void txa(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->acc = cpu->x;
     set_zero_and_negative(nes, cpu, cpu->acc);
 }
 
-inline void bcc(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
-    branch(nes, cpu, cpu->p.carry == 0, addr);
+inline void bcc(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    branch(nes, cpu, cpu->p.carry == 0, cpu->read_tmp);
 }
 
-inline void tya(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void tya(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->acc = cpu->y;
     set_zero_and_negative(nes, cpu, cpu->acc);
 }
 
-inline void txs(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void txs(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->sp = cpu->x;
 }
 
-inline void ldy(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
-    cpu->y = *addr;
+inline void ldy(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    cpu->y = cpu->read_tmp;
     set_zero_and_negative(nes,cpu, cpu->y);
 }
 
-inline void lda(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
-    cpu->acc = *addr;
+inline void lda(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    cpu->acc = cpu->read_tmp;
     set_zero_and_negative(nes, cpu, cpu->acc);
 }
 
-inline void ldx(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
-    cpu->x = *addr;
+inline void ldx(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    cpu->x = cpu->read_tmp;
     set_zero_and_negative(nes, cpu, cpu->x);
 }
 
-inline void tay(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void tay(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->y = cpu->acc;
     set_zero_and_negative(nes, cpu, cpu->y);
 }
 
-inline void tax(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void tax(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->x = cpu->acc;
     set_zero_and_negative(nes, cpu, cpu->x);
 }
 
-inline void bcs(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
-    branch(nes, cpu, cpu->p.carry == 1, addr);
+inline void bcs(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    branch(nes, cpu, cpu->p.carry == 1, cpu->read_tmp);
 }
 
-inline void clv(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void clv(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->p.overflow = 0;
 }
 
-inline void tsx(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void tsx(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->x = cpu->sp;
     set_zero_and_negative(nes, cpu, cpu->x);
 }
 
-inline void cpy(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
-    const uint8_t result = cpu->y - *addr;
+inline void cpy(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    const uint8_t result = cpu->y - cpu->read_tmp;
     set_zero_and_negative(nes, cpu, result);
-    cpu->p.carry = cpu->y >= *addr;
+    cpu->p.carry = cpu->y >= cpu->read_tmp;
 }
 
-inline void cmp(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
-    const uint8_t result = cpu->acc - *addr;
+inline void cmp(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    const uint8_t result = cpu->acc - cpu->read_tmp;
     set_zero_and_negative(nes, cpu, result);
-    cpu->p.carry = cpu->acc >= *addr;
+    cpu->p.carry = cpu->acc >= cpu->read_tmp;
 }
 
-inline void dec(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    (*addr)--;
-    set_zero_and_negative(nes, cpu, *addr);
+inline void dec(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    (cpu->read_tmp)--;
+    set_zero_and_negative(nes, cpu, cpu->read_tmp);
 }
 
-inline void iny(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void iny(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->y++;
     set_zero_and_negative(nes, cpu, cpu->y);
 }
 
-inline void dex(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void dex(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->x--;
     set_zero_and_negative(nes, cpu, cpu->x);
 }
 
-inline void bne(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
-    branch(nes, cpu, cpu->p.zero == 0, addr);
+inline void bne(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    branch(nes, cpu, cpu->p.zero == 0, cpu->read_tmp);
 }
 
-inline void cld(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void cld(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->p.decimal = 0;
 }
 
-inline void cpx(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
-    const uint8_t result = cpu->x - *addr;
+inline void cpx(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    const uint8_t result = cpu->x - cpu->read_tmp;
     set_zero_and_negative(nes, cpu, result);
-    cpu->p.carry = cpu->x >= *addr;
+    cpu->p.carry = cpu->x >= cpu->read_tmp;
 }
 
-inline void sbc(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
+inline void sbc(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     // a bit strange behavior here but this is how its implemented in hardware:
     // A + ~M + (C=1)
     // It can also be A - M - (!C) where !C is inverted carry but the hardware implementation is what i managed to get working
-    const uint8_t added_value = 255 - *addr;
+    const uint8_t added_value = 255 - cpu->read_tmp;
     const int sum = cpu->acc + added_value + cpu->p.carry;
 
     // Whether or not the subtraction resulted in a signed overflow, 128 -> -127
@@ -494,29 +577,34 @@ inline void sbc(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
     set_zero_and_negative(nes, cpu, cpu->acc);
 }
 
-inline void inc(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
-    (*addr)++;
-    set_zero_and_negative(nes, cpu, *addr);
+inline void inc(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    (cpu->read_tmp)++;
+    set_zero_and_negative(nes, cpu, cpu->read_tmp);
 }
 
-inline void inx(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void inx(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->x++;
     set_zero_and_negative(nes, cpu, cpu->x);
 }
 
-inline void nop(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void nop(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     // nothing here lol
 }
 
-inline void beq(struct Nes* nes, struct CPU* cpu, const uint8_t* addr){
-    branch(nes, cpu, cpu->p.zero == 1, addr);
+inline void beq(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
+    branch(nes, cpu, cpu->p.zero == 1, cpu->read_tmp);
 }
 
-inline void sed(struct Nes* nes, struct CPU* cpu, uint8_t* addr){
+inline void sed(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->p.decimal = 1;
 }
 
 inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, const uint8_t opcode) {
+    if (nes_is_nmi(nes)) {
+        handle_cpu_interrupt(nes, cpu, Interrupt_NMI);
+        return;
+    }
+
     switch (opcode) {
         INSTRUCTION(0x00, brk, 1, 7, Addressing_NoneAddressing)
         INSTRUCTION(0x01, ora, 2, 6, Addressing_IndirectX)

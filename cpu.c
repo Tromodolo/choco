@@ -33,7 +33,7 @@ struct CPU* nes_cpu_init(const struct Nes* nes) {
 
 void nes_cpu_tick(struct Nes* nes) {
     if (!nes->cpu->is_stopped && nes->cpu->waiting_cycles == 0) {
-        if (nes->cpu->total_cycles <= 26554)
+        // if (nes->cpu->total_cycles <= 26554)
             write_current_status_log(nes);
 
         // if (nes->cpu->pc == 0xC72A)

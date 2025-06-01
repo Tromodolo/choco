@@ -43,10 +43,6 @@ void nes_free(struct Nes* nes) {
     free(nes);
 }
 
-uint8_t* nes_get_addr_ptr(const struct Nes* nes, const uint16_t addr) {
-    return nes_cartridge_get_addr_ptr(nes->cartridge, addr);
-}
-
 inline uint8_t nes_read_char(const struct Nes* nes, const uint16_t addr) {
     bool is_hardware_register = false;
     const uint8_t hw_value = read_hw_register(nes, addr, &is_hardware_register);
@@ -146,7 +142,7 @@ inline void write_hw_register(const struct Nes* nes, uint16_t addr, const uint8_
             break;
         case 0x2002: // STATUS
             *is_hw_register = true;
-            assert(false);
+            // assert(false);
             break;
         case 0x2003: // OAM ADDR
             *is_hw_register = true;
@@ -193,4 +189,8 @@ inline void write_hw_register(const struct Nes* nes, uint16_t addr, const uint8_
             *is_hw_register = false;
             break;
     }
+}
+
+bool nes_is_nmi(const struct Nes* nes) {
+    return ppu_get_nmi_interrupt(nes, nes->ppu);
 }

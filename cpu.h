@@ -26,6 +26,8 @@ struct CPU {
     uint8_t sp;
     uint8_t waiting_cycles;
 
+    uint8_t read_tmp;
+
     uint8_t current_instruction;
 
     uint64_t total_cycles;
