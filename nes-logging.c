@@ -5,6 +5,7 @@
 #include "nes.h"
 #include "nes-logging.h"
 #include "instructions-internal.h"
+#include "ppu.h"
 
 struct Instruction {
     const char* name;
@@ -313,7 +314,7 @@ void write_current_status_log(const struct Nes* nes) {
     }
 
    printf(
-        "%04X  %s  %s %s  A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:  0, 00 CYC:%lu\n",
+        "%04X  %s  %s %s  A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:  %d, %d CYC:%lu\n",
         nes->cpu->pc,
         mem_values,
         instruction.name,
@@ -323,6 +324,8 @@ void write_current_status_log(const struct Nes* nes) {
         nes->cpu->y,
         nes->cpu->p.value,
         nes->cpu->sp,
+        nes->ppu->current_scanline,
+        nes->ppu->dots_drawn,
         nes->cpu->total_cycles
     );
 }

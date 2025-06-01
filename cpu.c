@@ -2,6 +2,9 @@
 #include <stdint.h>
 
 #include "cpu.h"
+
+#include <stdio.h>
+
 #include "nes.h"
 #include "instructions.h"
 #include "nes-logging.h"
@@ -24,8 +27,11 @@ struct CPU* nes_cpu_init(const struct Nes* nes) {
     cpu->waiting_cycles = 0;
     cpu->is_stopped = false;
 
+    cpu->read_tmp = 0;
+    cpu->update_value = false;
+
     // if(getenv("NESTEST")) {
-        //cpu->pc = 0xC000;
+        cpu->pc = 0xC000;
     // }
 
     return cpu;
@@ -33,11 +39,12 @@ struct CPU* nes_cpu_init(const struct Nes* nes) {
 
 void nes_cpu_tick(struct Nes* nes) {
     if (!nes->cpu->is_stopped && nes->cpu->waiting_cycles == 0) {
-        // if (nes->cpu->total_cycles <= 26554)
+        if (nes->cpu->total_cycles <= 26554)
             write_current_status_log(nes);
 
-        // if (nes->cpu->pc == 0xC72A)
-            // printf("123");
+        if (nes->cpu->pc == 0xC72F) {
+            printf("123");
+        }
 
         const uint8_t opcode = nes_read_char(nes, nes->cpu->pc++);
         nes_cpu_handle_instruction(nes, nes->cpu, opcode);

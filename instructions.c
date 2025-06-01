@@ -8,8 +8,10 @@ case opcode: {\
     cpu->current_instruction = opcode; \
     cpu->pc_pre = cpu->pc; \
     cpu->read_tmp = get_address(nes, cpu, addressing); \
+    cpu->update_value = false; \
     func(nes, cpu, addressing); \
-    write_address(nes, cpu, cpu->read_tmp, addressing); \
+    if(cpu->update_value) \
+        write_address(nes, cpu, cpu->read_tmp, addressing); \
     if (cpu->pc == cpu->pc_pre)\
         cpu->pc += numbytes - 1;\
     cpu->waiting_cycles += cyclecount;\
@@ -272,6 +274,7 @@ inline void kil(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addr
 inline void asl(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     set_higher_carry(nes, cpu, cpu->read_tmp);
     cpu->read_tmp <<= 1;
+    cpu->update_value = true;
     set_zero_and_negative(nes, cpu, cpu->read_tmp);
 }
 
@@ -319,6 +322,7 @@ inline void rol(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addr
     set_higher_carry(nes, cpu, cpu->read_tmp);
     cpu->read_tmp <<= 1;
     cpu->read_tmp += old_carry;
+    cpu->update_value = true;
     set_zero_and_negative(nes, cpu, cpu->read_tmp);
 }
 
@@ -356,6 +360,7 @@ inline void eor(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addr
 inline void lsr(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     set_lower_carry(nes, cpu, cpu->read_tmp);
     cpu->read_tmp >>= 1;
+    cpu->update_value = true;
     set_zero_and_negative(nes, cpu, cpu->read_tmp);
 }
 
@@ -426,6 +431,7 @@ inline void ror(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addr
     set_lower_carry(nes, cpu, cpu->read_tmp);
     cpu->read_tmp >>= 1;
     cpu->read_tmp |= (old_carry << 7);
+    cpu->update_value = true;
     set_zero_and_negative(nes, cpu, cpu->read_tmp);
 }
 
@@ -444,14 +450,17 @@ inline void sei(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addr
 
 inline void sta(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->read_tmp = cpu->acc;
+    cpu->update_value = true;
 }
 
 inline void sty(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->read_tmp = cpu->y;
+    cpu->update_value = true;
 }
 
 inline void stx(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
     cpu->read_tmp = cpu->x;
+    cpu->update_value = true;
 }
 
 inline void dey(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
@@ -528,7 +537,8 @@ inline void cmp(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addr
 }
 
 inline void dec(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
-    (cpu->read_tmp)--;
+    cpu->read_tmp--;
+    cpu->update_value = true;
     set_zero_and_negative(nes, cpu, cpu->read_tmp);
 }
 
@@ -578,7 +588,8 @@ inline void sbc(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addr
 }
 
 inline void inc(struct Nes* nes, struct CPU* cpu, const enum AddressingMode addressing){
-    (cpu->read_tmp)++;
+    cpu->read_tmp++;
+    cpu->update_value = true;
     set_zero_and_negative(nes, cpu, cpu->read_tmp);
 }
 
