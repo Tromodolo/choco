@@ -42,8 +42,9 @@ void nes_cpu_tick(struct Nes* nes) {
         if (nes->cpu->total_cycles <= 26554)
             write_current_status_log(nes);
 
-        if (nes->cpu->pc == 0xC72F) {
-            printf("123");
+        if (nes->cpu->pc == 0xE3BD) {
+            int x = 5;
+            x++;
         }
 
         const uint8_t opcode = nes_read_char(nes, nes->cpu->pc++);

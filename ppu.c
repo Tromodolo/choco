@@ -53,7 +53,7 @@ struct PPU* ppu_init(const struct Nes* nes) {
     ppu->read_buffer = 0;
     ppu->is_in_nmi = 0;
 
-    ppu->dots_drawn = 0;
+    ppu->dots_drawn = 20;
     ppu->current_scanline = 0;
     ppu->total_cycles = 0;
 
@@ -159,15 +159,18 @@ uint8_t internal_read(const struct Nes* nes, struct PPU* ppu, const uint16_t add
 void internal_write(const struct Nes* nes, const struct PPU* ppu, const uint16_t addr, const uint8_t val) {
     if (addr <= 0x1FFF) {
         ppu->chr_rom[addr] = val;
+        return;
     }
     if (addr <= 0x3EFF) {
         ppu->vram[mirror_vram_addr(nes, addr)] = val;
+        return;
     }
     if (addr <= 0X3FFF) {
         // 0x3F00-0x3F1F contain palette data
         // 0x3F20-0x3FFF is mirrored data
         const uint8_t mirrored_addr = addr & 0x1F;
         ppu->palette[mirrored_addr] = val;
+        return;
     }
 
     assert(false);

@@ -7,6 +7,8 @@ struct Nes {
     struct Cartridge* cartridge;
     struct CPU* cpu;
     struct PPU* ppu;
+
+    uint64_t global_cycle_count;
 };
 
 struct Nes* nes_init(const char* file_path);
