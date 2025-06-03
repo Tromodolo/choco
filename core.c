@@ -2,13 +2,14 @@
 
 #include "core.h"
 #include "nes.h"
+#include "ppu.h"
 
 inline struct Core* get_core_for_file(const char* file_path) {
     struct Core* core = malloc(sizeof(struct Core));
 
     core->emu = nes_init(file_path);
-    core->buffer_height = 240;
-    core->buffer_width = 256;
+    core->buffer_height = EFFECTIVE_SCREEN_HEIGHT;
+    core->buffer_width = SCREEN_WIDTH;
     core->frame_buffer = malloc(core->buffer_width * core->buffer_height * sizeof(Color));
     core->frame_buffer_changed = true;
 
@@ -21,10 +22,12 @@ inline struct Core* get_core_for_file(const char* file_path) {
 
 void core_audio_callback(struct Core* core, void *buffer_data, const unsigned int frames) {
     bool is_new_frame = false;
-    nes_get_samples(buffer_data, frames, core->emu, core->frame_buffer, &is_new_frame);
+    for (;;) {
+        nes_get_samples(buffer_data, frames, core->emu, core->frame_buffer, &is_new_frame);
 
-    if (is_new_frame) {
-        core->frame_buffer_changed = true;
+        if (is_new_frame) {
+            core->frame_buffer_changed = true;
+        }
     }
 }
 

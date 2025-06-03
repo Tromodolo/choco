@@ -33,14 +33,12 @@ struct Nes* nes_init_from_buffer(const uint8_t* buffer, const long size) {
 }
 
 inline void nes_get_samples(void* buffer_data, unsigned int frames, struct Nes* nes, Color* frame_buffer, bool* is_new_frame){
-    for (;;) {
-        ppu_tick(nes, nes->ppu, frame_buffer, is_new_frame);
+    ppu_tick(nes, nes->ppu, frame_buffer, is_new_frame);
 
-        if (nes->global_cycle_count % 3 == 0)
-            nes_cpu_tick(nes);
+    if (nes->global_cycle_count % 3 == 0)
+        nes_cpu_tick(nes);
 
-        nes->global_cycle_count++;
-    }
+    nes->global_cycle_count++;
 }
 
 void nes_free(struct Nes* nes) {

@@ -6,14 +6,15 @@
 #define INSTRUCTION(opcode, func, numbytes, cyclecount, canpagecross, addressing) \
 case opcode: {\
     cpu->current_instruction = opcode; \
+    cpu->current_addressing_mode = addressing; \
+    cpu->can_page_cross = canpagecross; \
     cpu->pc_pre = cpu->pc; \
-    cpu->read_tmp = get_address(nes, cpu, addressing, canpagecross); \
-    cpu->update_value = false; \
+    \
     func(nes, cpu); \
-    if(cpu->update_value) \
-        write_address(nes, cpu, cpu->read_tmp, addressing); \
+    \
     if (cpu->pc == cpu->pc_pre)\
         cpu->pc += numbytes - 1;\
+    \
     cpu->waiting_cycles += cyclecount;\
     break; \
 } \
@@ -59,6 +60,14 @@ void branch(struct Nes* nes, struct CPU* cpu, const bool condition, const uint8_
         cpu->waiting_cycles += 1;
     }
     cpu->pc = jump_addr;
+}
+
+inline void fetch_addressed_value(struct Nes* nes, struct CPU* cpu) {
+    cpu->read_tmp = get_address(nes, cpu, cpu->current_addressing_mode, cpu->can_page_cross);
+}
+
+inline void update_addressed_value(struct Nes* nes, struct CPU* cpu) {
+    write_address(nes, cpu, cpu->read_tmp, cpu->current_addressing_mode);
 }
 
 // I don't care how stupid this and the write_address solution is with read_tmp, so don't @ me
@@ -234,8 +243,9 @@ void stack_push(const struct Nes* nes, struct CPU* cpu, const uint8_t val) {
 }
 
 void handle_cpu_interrupt(const struct Nes* nes, struct CPU* cpu, const enum Interrupt type) {
-    stack_push(nes, cpu, (cpu->pc & 0xFF00) >> 8);
-    stack_push(nes, cpu, cpu->pc & 0xFF);
+    const uint16_t new_pc = cpu->pc + 1;
+    stack_push(nes, cpu, (new_pc & 0xFF00) >> 8);
+    stack_push(nes, cpu, new_pc & 0xFF);
 
     Flags status = cpu->p;
     status.break1 = 1;
@@ -246,13 +256,13 @@ void handle_cpu_interrupt(const struct Nes* nes, struct CPU* cpu, const enum Int
     switch (type) {
         case Interrupt_BRK:
             cpu->pc = nes_read_short(nes, BRK_VECTOR);
-        return;
+            return;
         case Interrupt_NMI:
             cpu->pc = nes_read_short(nes, NMI_VECTOR);
-        return;
+            return;
         case Interrupt_IRQ:
             cpu->pc = nes_read_short(nes, IRQ_VECTOR);
-        return;
+            return;
         default:
             return;
     }
@@ -272,10 +282,13 @@ inline void kil(struct Nes* nes, struct CPU* cpu){
 }
 
 inline void asl(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     set_higher_carry(nes, cpu, cpu->read_tmp);
     cpu->read_tmp <<= 1;
-    cpu->update_value = true;
     set_zero_and_negative(nes, cpu, cpu->read_tmp);
+
+    update_addressed_value(nes, cpu);
 }
 
 inline void php(const struct Nes* nes, struct CPU* cpu){
@@ -286,6 +299,8 @@ inline void php(const struct Nes* nes, struct CPU* cpu){
 }
 
 inline void bpl(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     branch(nes, cpu, cpu->p.negative == 0, cpu->read_tmp);
 }
 
@@ -301,11 +316,15 @@ inline void jsr(const struct Nes* nes, struct CPU* cpu){
 }
 
 inline void and(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     cpu->acc &= cpu->read_tmp;
     set_zero_and_negative(nes, cpu, cpu->acc);
 }
 
 inline void bit(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     const uint8_t result = cpu->acc & cpu->read_tmp;
     cpu->p.zero = result == 0;
     cpu->p.negative = (cpu->read_tmp & 0x80) >> 7;
@@ -313,12 +332,15 @@ inline void bit(struct Nes* nes, struct CPU* cpu){
 }
 
 inline void rol(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     const uint8_t old_carry = cpu->p.carry;
     set_higher_carry(nes, cpu, cpu->read_tmp);
     cpu->read_tmp <<= 1;
     cpu->read_tmp += old_carry;
-    cpu->update_value = true;
     set_zero_and_negative(nes, cpu, cpu->read_tmp);
+
+    update_addressed_value(nes, cpu);
 }
 
 inline void plp(const struct Nes* nes, struct CPU* cpu){
@@ -329,6 +351,8 @@ inline void plp(const struct Nes* nes, struct CPU* cpu){
 }
 
 inline void bmi(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     branch(nes, cpu, cpu->p.negative == 1, cpu->read_tmp);
 }
 
@@ -353,10 +377,13 @@ inline void eor(struct Nes* nes, struct CPU* cpu){
 }
 
 inline void lsr(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     set_lower_carry(nes, cpu, cpu->read_tmp);
     cpu->read_tmp >>= 1;
-    cpu->update_value = true;
     set_zero_and_negative(nes, cpu, cpu->read_tmp);
+
+    update_addressed_value(nes, cpu);
 }
 
 inline void pha(const struct Nes* nes, struct CPU* cpu){
@@ -390,6 +417,8 @@ inline void jmp(const struct Nes* nes, struct CPU* cpu){
 }
 
 inline void bvc(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     branch(nes, cpu, cpu->p.overflow == 0, cpu->read_tmp);
 }
 
@@ -405,6 +434,8 @@ inline void rts(const struct Nes* nes, struct CPU* cpu){
 }
 
 inline void adc(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     const int sum = cpu->acc + cpu->read_tmp + cpu->p.carry;
 
     // Whether or not the addition resulted in a signed overflow, 128 -> -127
@@ -422,12 +453,15 @@ inline void adc(struct Nes* nes, struct CPU* cpu){
 }
 
 inline void ror(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     const uint8_t old_carry = cpu->p.carry;
     set_lower_carry(nes, cpu, cpu->read_tmp);
     cpu->read_tmp >>= 1;
     cpu->read_tmp |= (old_carry << 7);
-    cpu->update_value = true;
     set_zero_and_negative(nes, cpu, cpu->read_tmp);
+
+    update_addressed_value(nes, cpu);
 }
 
 inline void pla(struct Nes* nes, struct CPU* cpu){
@@ -436,6 +470,8 @@ inline void pla(struct Nes* nes, struct CPU* cpu){
 }
 
 inline void bvs(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     branch(nes, cpu, cpu->p.overflow == 1, cpu->read_tmp);
 }
 
@@ -445,17 +481,20 @@ inline void sei(struct Nes* nes, struct CPU* cpu){
 
 inline void sta(struct Nes* nes, struct CPU* cpu){
     cpu->read_tmp = cpu->acc;
-    cpu->update_value = true;
+
+    update_addressed_value(nes, cpu);
 }
 
 inline void sty(struct Nes* nes, struct CPU* cpu){
     cpu->read_tmp = cpu->y;
-    cpu->update_value = true;
+
+    update_addressed_value(nes, cpu);
 }
 
 inline void stx(struct Nes* nes, struct CPU* cpu){
     cpu->read_tmp = cpu->x;
-    cpu->update_value = true;
+
+    update_addressed_value(nes, cpu);
 }
 
 inline void dey(struct Nes* nes, struct CPU* cpu){
@@ -469,6 +508,8 @@ inline void txa(struct Nes* nes, struct CPU* cpu){
 }
 
 inline void bcc(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     branch(nes, cpu, cpu->p.carry == 0, cpu->read_tmp);
 }
 
@@ -482,16 +523,22 @@ inline void txs(struct Nes* nes, struct CPU* cpu){
 }
 
 inline void ldy(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     cpu->y = cpu->read_tmp;
     set_zero_and_negative(nes,cpu, cpu->y);
 }
 
 inline void lda(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     cpu->acc = cpu->read_tmp;
     set_zero_and_negative(nes, cpu, cpu->acc);
 }
 
 inline void ldx(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     cpu->x = cpu->read_tmp;
     set_zero_and_negative(nes, cpu, cpu->x);
 }
@@ -507,6 +554,8 @@ inline void tax(struct Nes* nes, struct CPU* cpu){
 }
 
 inline void bcs(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     branch(nes, cpu, cpu->p.carry == 1, cpu->read_tmp);
 }
 
@@ -520,21 +569,28 @@ inline void tsx(struct Nes* nes, struct CPU* cpu){
 }
 
 inline void cpy(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     const uint8_t result = cpu->y - cpu->read_tmp;
     set_zero_and_negative(nes, cpu, result);
     cpu->p.carry = cpu->y >= cpu->read_tmp;
 }
 
 inline void cmp(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     const uint8_t result = cpu->acc - cpu->read_tmp;
     set_zero_and_negative(nes, cpu, result);
     cpu->p.carry = cpu->acc >= cpu->read_tmp;
 }
 
 inline void dec(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     cpu->read_tmp--;
-    cpu->update_value = true;
     set_zero_and_negative(nes, cpu, cpu->read_tmp);
+
+    update_addressed_value(nes, cpu);
 }
 
 inline void iny(struct Nes* nes, struct CPU* cpu){
@@ -548,6 +604,8 @@ inline void dex(struct Nes* nes, struct CPU* cpu){
 }
 
 inline void bne(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     branch(nes, cpu, cpu->p.zero == 0, cpu->read_tmp);
 }
 
@@ -556,12 +614,16 @@ inline void cld(struct Nes* nes, struct CPU* cpu){
 }
 
 inline void cpx(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     const uint8_t result = cpu->x - cpu->read_tmp;
     set_zero_and_negative(nes, cpu, result);
     cpu->p.carry = cpu->x >= cpu->read_tmp;
 }
 
 inline void sbc(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     // a bit strange behavior here but this is how its implemented in hardware:
     // A + ~M + (C=1)
     // It can also be A - M - (!C) where !C is inverted carry but the hardware implementation is what i managed to get working
@@ -583,9 +645,12 @@ inline void sbc(struct Nes* nes, struct CPU* cpu){
 }
 
 inline void inc(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     cpu->read_tmp++;
-    cpu->update_value = true;
     set_zero_and_negative(nes, cpu, cpu->read_tmp);
+
+    update_addressed_value(nes, cpu);
 }
 
 inline void inx(struct Nes* nes, struct CPU* cpu){
@@ -598,6 +663,8 @@ inline void nop(struct Nes* nes, struct CPU* cpu){
 }
 
 inline void beq(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     branch(nes, cpu, cpu->p.zero == 1, cpu->read_tmp);
 }
 

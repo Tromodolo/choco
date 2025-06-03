@@ -2,6 +2,22 @@
 #define CPU_H
 #include "nes.h"
 
+enum AddressingMode {
+    Addressing_Immediate,
+    Addressing_ZeroPage,
+    Addressing_ZeroPageX,
+    Addressing_ZeroPageY,
+    Addressing_Accumulator,
+    Addressing_Absolute,
+    Addressing_AbsoluteX,
+    Addressing_AbsoluteY,
+    Addressing_Indirect,
+    Addressing_IndirectX,
+    Addressing_IndirectY,
+    Addressing_Relative,
+    Addressing_NoneAddressing,
+};
+
 typedef union
 {
     struct {
@@ -26,10 +42,10 @@ struct CPU {
     uint8_t sp;
     uint8_t waiting_cycles;
 
-    bool update_value;
-    uint8_t read_tmp;
-
     uint8_t current_instruction;
+    enum AddressingMode current_addressing_mode;
+    bool can_page_cross;
+    uint8_t read_tmp;
 
     uint64_t total_cycles;
 

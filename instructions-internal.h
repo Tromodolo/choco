@@ -1,29 +1,19 @@
 #ifndef INSTRUCTIONS_INTERNAL_H
 #define INSTRUCTIONS_INTERNAL_H
 #include <stdint.h>
+#include "cpu.h"
 
 // A bit silly but this is needed to be able to test in ./tests
 
-enum AddressingMode {
-    Addressing_Immediate,
-    Addressing_ZeroPage,
-    Addressing_ZeroPageX,
-    Addressing_ZeroPageY,
-    Addressing_Accumulator,
-    Addressing_Absolute,
-    Addressing_AbsoluteX,
-    Addressing_AbsoluteY,
-    Addressing_Indirect,
-    Addressing_IndirectX,
-    Addressing_IndirectY,
-    Addressing_Relative,
-    Addressing_NoneAddressing,
-};
 
 void set_zero_and_negative(struct Nes* nes, struct CPU* cpu, uint8_t value);
 bool is_page_cross(uint16_t base, uint16_t addr);
+
 uint8_t get_address(const struct Nes* nes, struct CPU* cpu, enum AddressingMode mode, bool can_page_cross);
 void write_address(const struct Nes* nes, struct CPU* cpu, const uint8_t val, const enum AddressingMode mode);
+
+void fetch_addressed_value(struct Nes* nes, struct CPU* cpu);
+void update_addressed_value(struct Nes* nes, struct CPU* cpu);
 
 void brk(const struct Nes* nes, struct CPU* cpu);
 void ora(struct Nes* nes, struct CPU* cpu);

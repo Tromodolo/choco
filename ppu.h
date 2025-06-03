@@ -2,6 +2,13 @@
 #define PPU_H
 #include "nes.h"
 
+constexpr int SCREEN_OFFSET_TOP = 8;
+constexpr int SCREEN_OFFSET_BOTTOM = 8;
+
+constexpr int SCREEN_WIDTH = 256;
+constexpr int SCREEN_HEIGHT = 240;
+constexpr int EFFECTIVE_SCREEN_HEIGHT = SCREEN_HEIGHT - SCREEN_OFFSET_TOP - SCREEN_OFFSET_BOTTOM;
+
 struct SpriteEntry {
     uint8_t y_position;
     uint8_t x_position;
@@ -13,12 +20,12 @@ struct SpriteEntry {
 typedef union
 {
     struct {
-        uint8_t coarse_x : 5;
-        uint8_t coarse_y : 5;
-        uint8_t nametable_x : 1;
-        uint8_t nametable_y : 1;
-        uint8_t fine_y : 3;
-        uint8_t _unused : 1;
+        uint16_t coarse_x : 5;
+        uint16_t coarse_y : 5;
+        uint16_t nametable_x : 1;
+        uint16_t nametable_y : 1;
+        uint16_t fine_y : 3;
+        uint16_t _unused : 1;
     };
     uint16_t value;
 } Loopy;

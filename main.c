@@ -9,6 +9,7 @@ constexpr int SCREEN_WIDTH = 800;
 constexpr int SCREEN_HEIGHT = 600;
 
 struct Core* core;
+int framecount = 0;
 
 void get_samples(void *bufferData, const unsigned int frames){
     short* samples = bufferData;
@@ -41,16 +42,34 @@ int main(void) {
     const Texture2D texture = LoadTextureFromImage(blank);
     UnloadImage(blank);
 
+    char* title = malloc(100);
+
     while (!WindowShouldClose()) {
         if (core->frame_buffer_changed) {
             UpdateTexture(texture, core->frame_buffer);
             core->frame_buffer_changed = false;
+            framecount++;
+
+            sprintf(title, "%d", framecount);
+            SetWindowTitle(title);
         }
 
         BeginDrawing();
         {
             ClearBackground(BLACK);
-            DrawTexture(texture, (SCREEN_WIDTH - texture.width) / 2, (SCREEN_HEIGHT - texture.height) / 2, WHITE);
+
+            const Rectangle source = {0, 0, core->buffer_width, core->buffer_height};
+            const Rectangle dest = {0, 0, core->buffer_width * 2, core->buffer_height * 2};
+            const Vector2 origin = {0, 0};
+
+            DrawTexturePro(
+                texture,
+                source,
+                dest,
+                origin,
+                0.0f,
+                WHITE
+            );
         }
         EndDrawing();
     }

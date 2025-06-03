@@ -2,6 +2,7 @@
 #include <assert.h>
 
 #include "ppu.h"
+
 #include "cartridge.h"
 #include "palette.h"
 
@@ -13,12 +14,6 @@ constexpr int TILE_START_ADDR = 0x2000;
 constexpr int TILE_ATTR_START_ADDR = 0x23c0;
 
 constexpr int MAX_SPRITE_COUNT = 8;
-
-constexpr int SCREEN_OFFSET_TOP = 8;
-constexpr int SCREEN_OFFSET_BOTTOM = 8;
-
-constexpr int SCREEN_WIDTH = 256;
-constexpr int SCREEN_HEIGHT = 240;
 
 // Inline functions declaration
 uint16_t get_increment(const struct PPU* ppu);
@@ -53,7 +48,7 @@ struct PPU* ppu_init(const struct Nes* nes) {
     ppu->read_buffer = 0;
     ppu->is_in_nmi = 0;
 
-    ppu->dots_drawn = 20;
+    ppu->dots_drawn = 0;
     ppu->current_scanline = 0;
     ppu->total_cycles = 0;
 
@@ -229,11 +224,11 @@ bool ppu_tick(struct Nes* nes, struct PPU* ppu, Color* frame_buffer, bool* is_ne
 
         if (ppu->dots_drawn == 257) {
             // reset back to start of line
-            reset_x_addr(ppu);
             load_bg_shifters(ppu);
+            reset_x_addr(ppu);
         }
 
-        if (ppu->dots_drawn == 340) {
+        if (ppu->dots_drawn == 338 || ppu->dots_drawn == 340) {
             // preload next tile
             const int tile_addr = mirror_vram_addr(nes, TILE_START_ADDR | ppu->loopy_value.value & 0xFFF);
             ppu->bg_next_tile_id = ppu->vram[tile_addr];
@@ -305,13 +300,13 @@ uint8_t ppu_get_oam_data(const struct Nes* nes, const struct PPU* ppu) {
 }
 uint8_t ppu_get_data(const struct Nes* nes, struct PPU* ppu) {
     const uint16_t addr = ppu->loopy_value.value;
-    ppu->loopy_value.value += get_increment(ppu);
+    ppu->loopy_value.value = ppu->loopy_value.value + get_increment(ppu);
     return internal_read(nes, ppu, addr);
 }
 
 void ppu_write_ctrl(const struct Nes* nes, struct PPU* ppu, const uint8_t value) {
     ppu->loopy_temp.nametable_x = value & 0b01;
-    ppu->loopy_temp.nametable_y = value & 0b10 >> 1;
+    ppu->loopy_temp.nametable_y = (value & 0b10) >> 1;
 
     const bool before_nmi = ppu->control_register.nmi_enable;
     ppu->control_register.value = value;
@@ -364,8 +359,8 @@ void ppu_write_mask(const struct Nes* nes, struct PPU* ppu, const uint8_t value)
 
 inline uint16_t get_increment(const struct PPU* ppu) {
     return ppu->control_register.vram_address_increment
-        ? 1
-        : 0x20;
+        ? 0x20
+        : 1;
 }
 inline uint16_t get_background_pattern_address(const struct PPU* ppu) {
     return ppu->control_register.background_pattern_address
@@ -386,8 +381,8 @@ inline uint8_t get_sprite_size(const struct PPU* ppu) {
 }
 
 inline void load_bg_shifters(struct PPU* ppu) {
-    ppu->bg_shifter_attribute_lo = ppu->bg_shifter_attribute_lo & 0xFF00 | ppu->bg_next_tile_lsb;
-    ppu->bg_shifter_attribute_hi = ppu->bg_shifter_attribute_hi & 0xFF00 | ppu->bg_next_tile_msb;
+    ppu->bg_shifter_pattern_lo = ppu->bg_shifter_pattern_lo & 0xFF00 | ppu->bg_next_tile_lsb;
+    ppu->bg_shifter_pattern_hi = ppu->bg_shifter_pattern_hi & 0xFF00 | ppu->bg_next_tile_msb;
 
     const int attributeLo = ppu->bg_next_tile_attribute & 0b01;
     const int attributeHi = ppu->bg_next_tile_attribute & 0b10;
@@ -415,7 +410,13 @@ inline void load_bg_patterns(const struct Nes* nes, struct PPU* ppu) {
             ppu->bg_next_tile_id = ppu->vram[tileAddr];
             break;
         case 2:
-            const int attributeAddr = mirror_vram_addr(nes, TILE_ATTR_START_ADDR | ppu->loopy_value.value & 0xFFF);
+            const int attributeAddr = mirror_vram_addr(nes,
+                TILE_ATTR_START_ADDR |
+                ppu->loopy_value.nametable_y << 11 |
+                ppu->loopy_value.nametable_x << 10 |
+                (ppu->loopy_value.coarse_y >> 2) << 3 |
+                ppu->loopy_value.coarse_x);
+
             ppu->bg_next_tile_attribute = ppu->vram[attributeAddr];
 
             if (ppu->loopy_value.coarse_y & 0x02) {
@@ -679,7 +680,7 @@ inline void render_current_dot(struct Nes* nes, struct PPU* ppu, Color* frame_bu
 
 inline void increment_scroll_x(struct PPU* ppu) {
     if (ppu->mask_register.sprite_render_enable || ppu->mask_register.background_render_enable) {
-        if (ppu->loopy_value.coarse_x == 32) {
+        if (ppu->loopy_value.coarse_x == 31) {
             ppu->loopy_value.coarse_x = 0;
             ppu->loopy_value.nametable_x = !ppu->loopy_value.nametable_x;
         } else {
