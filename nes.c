@@ -61,6 +61,9 @@ void nes_read_inputs(struct Nes* nes) {
 
     nes->player_1_input.start = IsKeyDown(KEY_ENTER);
     nes->player_1_input.select = IsKeyDown(KEY_RIGHT_SHIFT);
+
+    if (nes->player_1_input.value > 0)
+        printf("%d\n", nes->player_1_input.value);
 }
 
 inline uint8_t nes_read_char(struct Nes* nes, const uint16_t addr) {

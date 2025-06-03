@@ -64,12 +64,6 @@ struct Cartridge* nes_cartridge_load_from_buffer(const uint8_t* buffer, const lo
     }
 
     const bool is_ines = buffer[INES_DETECTION] == 0x00;
-    const bool is_nes2 = buffer[INES_DETECTION] == 0x08;
-
-    if (!is_ines && !is_nes2) {
-        printf("Not a valid cartridge file!!!\n");
-        return nullptr;
-    }
 
     const int prg_rom_size = buffer[INES_PRG_ROM_SIZE] * INES_PRG_ROM_BANK_SIZE;
     int chr_rom_size = buffer[INES_CHR_ROM_SIZE] * INES_CHR_ROM_BANK_SIZE;
@@ -94,7 +88,7 @@ struct Cartridge* nes_cartridge_load_from_buffer(const uint8_t* buffer, const lo
 
     const int mapper =  mapper_hi | mapper_lo;
 
-    if (is_nes2) {
+    if (!is_ines) {
         printf("NES 2.0 not supported yet!!!\n");
         return nullptr;
     }
@@ -158,7 +152,7 @@ inline uint8_t nes_cartridge_read_char(const struct Cartridge* cartridge, uint16
 inline void nes_cartridge_write_char(const struct Cartridge* cartridge, uint16_t addr, const uint8_t val) {
     if (addr <= RAM_MIRRORS_END) {
         if (addr == 0x02 || addr == 0x03)
-            printf("%d\\n", addr);
+            printf("%d: %02x\n", addr, val);
 
         cartridge->prg_ram[addr & 0x7FF] = val;
     } else if (addr >= PRG_ROM_START && addr <= PRG_ROM_END) {
