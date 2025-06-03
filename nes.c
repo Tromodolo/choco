@@ -3,13 +3,14 @@
 #include "nes.h"
 
 #include <assert.h>
+#include <stdio.h>
 
 #include "cartridge.h"
 #include "cpu.h"
 #include "ppu.h"
 
-uint8_t read_hw_register(const struct Nes* nes, uint16_t addr, bool* is_hw_register);
-void write_hw_register(const struct Nes* nes, uint16_t addr, const uint8_t val, bool* is_hw_register);
+uint8_t read_hw_register(struct Nes* nes, uint16_t addr, bool* is_hw_register);
+void write_hw_register(struct Nes* nes, uint16_t addr, const uint8_t val, bool* is_hw_register);
 
 struct Nes* nes_init(const char* file_path) {
     struct Nes* nes = malloc(sizeof(struct Nes));
@@ -17,6 +18,8 @@ struct Nes* nes_init(const char* file_path) {
     nes->cartridge = nes_cartridge_load_from_file(file_path);
     nes->cpu =  nes_cpu_init(nes);
     nes->ppu = ppu_init(nes);
+
+    nes->player_1_input.value = 0;
 
     nes->global_cycle_count = 0;
 
@@ -47,7 +50,20 @@ void nes_free(struct Nes* nes) {
     free(nes);
 }
 
-inline uint8_t nes_read_char(const struct Nes* nes, const uint16_t addr) {
+void nes_read_inputs(struct Nes* nes) {
+    nes->player_1_input.up = IsKeyDown(KEY_W);
+    nes->player_1_input.down = IsKeyDown(KEY_S);
+    nes->player_1_input.left = IsKeyDown(KEY_A);
+    nes->player_1_input.right = IsKeyDown(KEY_D);
+
+    nes->player_1_input.a = IsKeyDown(KEY_J);
+    nes->player_1_input.b = IsKeyDown(KEY_K);
+
+    nes->player_1_input.start = IsKeyDown(KEY_ENTER);
+    nes->player_1_input.select = IsKeyDown(KEY_RIGHT_SHIFT);
+}
+
+inline uint8_t nes_read_char(struct Nes* nes, const uint16_t addr) {
     bool is_hardware_register = false;
     const uint8_t hw_value = read_hw_register(nes, addr, &is_hardware_register);
     if (is_hardware_register) {
@@ -56,7 +72,7 @@ inline uint8_t nes_read_char(const struct Nes* nes, const uint16_t addr) {
 
     return nes_cartridge_read_char(nes->cartridge, addr);
 }
-inline void nes_write_char(const struct Nes* nes, const uint16_t addr, const uint8_t val) {
+inline void nes_write_char(struct Nes* nes, const uint16_t addr, const uint8_t val) {
     bool is_hardware_register = false;
     write_hw_register(nes, addr, val, &is_hardware_register);
     if (is_hardware_register) {
@@ -66,19 +82,19 @@ inline void nes_write_char(const struct Nes* nes, const uint16_t addr, const uin
     return nes_cartridge_write_char(nes->cartridge, addr, val);
 }
 
-inline uint16_t nes_read_short(const struct Nes* nes, uint16_t addr) {
+inline uint16_t nes_read_short(struct Nes* nes, uint16_t addr) {
     const uint8_t lo = nes_cartridge_read_char(nes->cartridge, addr);
     const uint8_t hi = nes_cartridge_read_char(nes->cartridge, ++addr);
     return hi << 8 | lo;
 }
-inline void nes_write_short(const struct Nes* nes, uint16_t addr, const uint16_t val) {
+inline void nes_write_short(struct Nes* nes, uint16_t addr, const uint16_t val) {
     const uint8_t lo = val & 0xFF;
     const uint8_t hi = val >> 8;
     nes_cartridge_write_char(nes->cartridge, addr, lo);
     nes_cartridge_write_char(nes->cartridge, ++addr, hi);
 }
 
-inline uint8_t read_hw_register(const struct Nes* nes, uint16_t addr, bool* is_hw_register){
+inline uint8_t read_hw_register(struct Nes* nes, uint16_t addr, bool* is_hw_register){
     if (addr >= RAM_MIRRORS_END && addr <= PPU_MIRRORS_END) {
         addr &= 0x2007;
     }
@@ -96,10 +112,11 @@ inline uint8_t read_hw_register(const struct Nes* nes, uint16_t addr, bool* is_h
         case 0x2007: // DATA
             *is_hw_register = true;
             return ppu_get_data(nes, nes->ppu);;
-            break;
         case 0x4016: // GAMEPAD 1
             *is_hw_register = true;
-            break;
+            const uint8_t value = nes->current_reading_button_value & 1;
+            nes->current_reading_button_value >>= 1;
+            return value;
         case 0x2000: // CTRL
         case 0x2001: // MASK
         case 0x2005: // SCROLL
@@ -130,7 +147,7 @@ inline uint8_t read_hw_register(const struct Nes* nes, uint16_t addr, bool* is_h
     return 0;
 }
 
-inline void write_hw_register(const struct Nes* nes, uint16_t addr, const uint8_t val, bool* is_hw_register){
+inline void write_hw_register(struct Nes* nes, uint16_t addr, const uint8_t val, bool* is_hw_register){
     if (addr >= RAM_MIRRORS_END && addr <= PPU_MIRRORS_END) {
         addr &= 0x2007;
     }
@@ -170,6 +187,9 @@ inline void write_hw_register(const struct Nes* nes, uint16_t addr, const uint8_
             break;
         case 0x4016: // GAMEPAD 1
             *is_hw_register = true;
+            if ((val & 1) == 1) {
+                nes->current_reading_button_value = nes->player_1_input.value;
+            }
             break;
         case 0x4000: // APU
         case 0x4001: // APU

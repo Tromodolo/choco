@@ -31,6 +31,10 @@ void core_audio_callback(struct Core* core, void *buffer_data, const unsigned in
     }
 }
 
+void core_read_inputs(const struct Core* core) {
+    nes_read_inputs(core->emu);
+}
+
 inline void core_clear_frame_buffer_changed(struct Core* core) {
     core->frame_buffer_changed = false;
 }

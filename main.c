@@ -45,6 +45,8 @@ int main(void) {
     char* title = malloc(100);
 
     while (!WindowShouldClose()) {
+        core_read_inputs(core);
+
         if (core->frame_buffer_changed) {
             UpdateTexture(texture, core->frame_buffer);
             core->frame_buffer_changed = false;
