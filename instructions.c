@@ -71,7 +71,7 @@ inline void update_addressed_value(struct Nes* nes, struct CPU* cpu) {
 }
 
 // I don't care how stupid this and the write_address solution is with read_tmp, so don't @ me
-inline uint8_t get_address(const struct Nes* nes, struct CPU* cpu, const enum AddressingMode mode, bool can_page_cross) {
+inline uint8_t get_address(struct Nes* nes, struct CPU* cpu, const enum AddressingMode mode, bool can_page_cross) {
     switch (mode) {
         case Addressing_NoneAddressing:
             return 0;
@@ -152,7 +152,7 @@ inline uint8_t get_address(const struct Nes* nes, struct CPU* cpu, const enum Ad
     }
 }
 
-inline void write_address(const struct Nes* nes, struct CPU* cpu, const uint8_t val, const enum AddressingMode mode) {
+inline void write_address(struct Nes* nes, struct CPU* cpu, const uint8_t val, const enum AddressingMode mode) {
     switch (mode) {
         case Addressing_NoneAddressing:
             return;
@@ -232,17 +232,17 @@ inline void write_address(const struct Nes* nes, struct CPU* cpu, const uint8_t 
     }
 }
 
-uint8_t stack_pop(const struct Nes* nes, struct CPU* cpu) {
+uint8_t stack_pop(struct Nes* nes, struct CPU* cpu) {
     cpu->sp++;
     return nes_read_char(nes, STACK_START + cpu->sp);
 }
 
-void stack_push(const struct Nes* nes, struct CPU* cpu, const uint8_t val) {
+void stack_push(struct Nes* nes, struct CPU* cpu, const uint8_t val) {
     nes_write_char(nes, STACK_START + cpu->sp, val);
     cpu->sp--;
 }
 
-void handle_cpu_interrupt(const struct Nes* nes, struct CPU* cpu, const enum Interrupt type) {
+void handle_cpu_interrupt(struct Nes* nes, struct CPU* cpu, const enum Interrupt type) {
     const uint16_t new_pc = cpu->pc + 1;
     stack_push(nes, cpu, (new_pc & 0xFF00) >> 8);
     stack_push(nes, cpu, new_pc & 0xFF);
@@ -268,11 +268,13 @@ void handle_cpu_interrupt(const struct Nes* nes, struct CPU* cpu, const enum Int
     }
 }
 
-inline void brk(const struct Nes* nes, struct CPU* cpu) {
+inline void brk(struct Nes* nes, struct CPU* cpu) {
     handle_cpu_interrupt(nes, cpu, Interrupt_BRK);
 }
 
 inline void ora(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     cpu->acc |= cpu->read_tmp;
     set_zero_and_negative(nes, cpu, cpu->acc);
 }
@@ -291,7 +293,7 @@ inline void asl(struct Nes* nes, struct CPU* cpu){
     update_addressed_value(nes, cpu);
 }
 
-inline void php(const struct Nes* nes, struct CPU* cpu){
+inline void php(struct Nes* nes, struct CPU* cpu){
     Flags status = cpu->p;
     status.break1 = 1;
     status.break2 = 1;
@@ -308,7 +310,7 @@ inline void clc(struct Nes* nes, struct CPU* cpu){
     cpu->p.carry = 0;
 }
 
-inline void jsr(const struct Nes* nes, struct CPU* cpu){
+inline void jsr(struct Nes* nes, struct CPU* cpu){
     const uint16_t new_pc = cpu->pc + 1;
     stack_push(nes, cpu, (new_pc & 0xFF00) >> 8);
     stack_push(nes, cpu, new_pc & 0xFF);
@@ -343,7 +345,7 @@ inline void rol(struct Nes* nes, struct CPU* cpu){
     update_addressed_value(nes, cpu);
 }
 
-inline void plp(const struct Nes* nes, struct CPU* cpu){
+inline void plp(struct Nes* nes, struct CPU* cpu){
     // Masked away break1
     cpu->p.value = stack_pop(nes, cpu);
     cpu->p.break1 = 0;
@@ -360,7 +362,7 @@ inline void sec(struct Nes* nes, struct CPU* cpu){
     cpu->p.carry = 1;
 }
 
-inline void rti(const struct Nes* nes, struct CPU* cpu){
+inline void rti(struct Nes* nes, struct CPU* cpu){
     // Masked away break1
     cpu->p.value = stack_pop(nes, cpu);
     cpu->p.break1 = 0;
@@ -372,6 +374,8 @@ inline void rti(const struct Nes* nes, struct CPU* cpu){
 }
 
 inline void eor(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
     cpu->acc ^= cpu->read_tmp;
     set_zero_and_negative(nes, cpu, cpu->acc);
 }
@@ -386,11 +390,11 @@ inline void lsr(struct Nes* nes, struct CPU* cpu){
     update_addressed_value(nes, cpu);
 }
 
-inline void pha(const struct Nes* nes, struct CPU* cpu){
+inline void pha(struct Nes* nes, struct CPU* cpu){
     stack_push(nes, cpu, cpu->acc);
 }
 
-inline void jmp(const struct Nes* nes, struct CPU* cpu){
+inline void jmp(struct Nes* nes, struct CPU* cpu){
     // absolute addressing
     if (cpu->current_instruction == 0x4C) {
         cpu->pc = nes_read_short(nes, cpu->pc);
@@ -426,7 +430,7 @@ inline void cli(struct Nes* nes, struct CPU* cpu){
     cpu->p.interrupt_disable = 0;
 }
 
-inline void rts(const struct Nes* nes, struct CPU* cpu){
+inline void rts(struct Nes* nes, struct CPU* cpu){
     const uint8_t pc_lo = stack_pop(nes, cpu);
     const uint8_t pc_hi = stack_pop(nes, cpu);
     const uint16_t new_pc = pc_hi << 8 | pc_lo;
@@ -672,6 +676,202 @@ inline void sed(struct Nes* nes, struct CPU* cpu){
     cpu->p.decimal = 1;
 }
 
+// illegal
+inline void slo(struct Nes* nes, struct CPU* cpu) {
+    asl(nes, cpu);
+
+    fetch_addressed_value(nes, cpu);
+    cpu->acc |= cpu->read_tmp;
+    set_zero_and_negative(nes, cpu, cpu->acc);
+}
+
+inline void anc(struct Nes* nes, struct CPU* cpu) {
+    fetch_addressed_value(nes, cpu);
+
+    cpu->acc &= cpu->read_tmp;
+    set_zero_and_negative(nes, cpu, cpu->read_tmp);
+
+    if (cpu->p.negative)
+        cpu->p.carry = 1;
+}
+
+inline void rla(struct Nes* nes, struct CPU* cpu) {
+    rol(nes, cpu);
+
+    fetch_addressed_value(nes, cpu);
+
+    cpu->acc &= cpu->read_tmp;
+    set_zero_and_negative(nes, cpu, cpu->acc);
+}
+
+inline void sre(struct Nes* nes, struct CPU* cpu) {
+    lsr(nes, cpu);
+
+    fetch_addressed_value(nes, cpu);
+
+    cpu->acc ^= cpu->read_tmp;
+    set_zero_and_negative(nes, cpu, cpu->acc);
+}
+
+inline void asr(struct Nes* nes, struct CPU* cpu) {
+    fetch_addressed_value(nes, cpu);
+
+    cpu->acc &= cpu->read_tmp;
+    cpu->current_addressing_mode = Addressing_Accumulator;
+    ror(nes, cpu);
+}
+
+inline void rra(struct Nes* nes, struct CPU* cpu) {
+    ror(nes, cpu);
+
+    fetch_addressed_value(nes, cpu);
+
+    const int sum = cpu->acc + cpu->read_tmp + cpu->p.carry;
+
+    // Whether or not the addition resulted in a signed overflow, 128 -> -127
+    // Example
+    // Acc = 0x7F
+    // cpu->read_tmp = 2
+    // (0x7F ^ 0x81) & (0x02 ^ 0x81) & 0x80;
+    // (0xfe) & (0x83) & 0x80 == 0x80
+    // Meaning if the sum matches either the sign of the acc or the value, it's not an overflow
+    cpu->p.overflow = ((cpu->acc ^ sum) & (cpu->read_tmp ^ sum) & 0x80) >> 7;
+    cpu->p.carry = sum > 0xFF;
+
+    cpu->acc = sum;
+    set_zero_and_negative(nes, cpu, cpu->acc);
+}
+
+inline void arr(struct Nes* nes, struct CPU* cpu) {
+    fetch_addressed_value(nes, cpu);
+
+    cpu->acc &= cpu->read_tmp;
+
+    cpu->current_addressing_mode = Addressing_Accumulator;
+    ror(nes, cpu);
+
+    set_zero_and_negative(nes, cpu, cpu->acc);
+
+    const bool six = (cpu->acc & 0b01000000) > 0;
+    const bool five = (cpu->acc & 0b00100000) > 0;
+
+    if ((six && five) || (six && !five)) {
+        cpu->p.carry = 1;
+        cpu->p.overflow = 0;
+    } else if ((!six && !five) || (!six && five)) {
+        cpu->p.overflow = 1;
+        cpu->p.carry = 0;
+    }
+}
+
+inline void xaa(struct Nes* nes, struct CPU* cpu){
+    // nothing lol
+}
+
+inline void sax(struct Nes* nes, struct CPU* cpu){
+    cpu->read_tmp = cpu->x & cpu->acc;
+
+    update_addressed_value(nes, cpu);
+}
+
+inline void sya(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
+    cpu->read_tmp = cpu->y & (cpu->read_tmp & 0xF0) + 1;
+
+    update_addressed_value(nes, cpu);
+}
+
+inline void sxa(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
+    cpu->read_tmp = cpu->x & (cpu->read_tmp & 0xF0) + 1;
+
+    update_addressed_value(nes, cpu);
+}
+
+inline void axa(struct Nes* nes, struct CPU* cpu){
+    cpu->read_tmp = cpu->x & cpu->acc & 0b111;
+
+    update_addressed_value(nes, cpu);
+}
+
+inline void atx(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
+    cpu->acc &= cpu->read_tmp;
+    cpu->x = cpu->acc;
+    set_zero_and_negative(nes, cpu, cpu->x);
+}
+
+inline void dcp(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
+    cpu->read_tmp--;
+
+    update_addressed_value(nes, cpu);
+
+    cpu->p.carry = cpu->read_tmp <= cpu->acc;
+
+    const uint8_t result = cpu->acc - cpu->read_tmp;
+    set_zero_and_negative(nes, cpu, result);
+}
+
+inline void isb(struct Nes* nes, struct CPU* cpu){
+    inc(nes, cpu);
+
+    fetch_addressed_value(nes, cpu);
+    cpu->read_tmp  = 255 - cpu->read_tmp;
+
+    const int sum = cpu->acc + cpu->read_tmp + cpu->p.carry;
+
+    // Whether or not the addition resulted in a signed overflow, 128 -> -127
+    // Example
+    // Acc = 0x7F
+    // cpu->read_tmp = 2
+    // (0x7F ^ 0x81) & (0x02 ^ 0x81) & 0x80;
+    // (0xfe) & (0x83) & 0x80 == 0x80
+    // Meaning if the sum matches either the sign of the acc or the value, it's not an overflow
+    cpu->p.overflow = ((cpu->acc ^ sum) & (cpu->read_tmp ^ sum) & 0x80) >> 7;
+    cpu->p.carry = sum > 0xFF;
+
+    cpu->acc = sum;
+    set_zero_and_negative(nes, cpu, cpu->acc);
+}
+
+inline void lax(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
+    cpu->acc = cpu->read_tmp;
+    cpu->x = cpu->read_tmp;
+    set_zero_and_negative(nes, cpu, cpu->read_tmp);
+}
+
+inline void lar(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
+    cpu->read_tmp &= cpu->sp;
+    cpu->acc = cpu->read_tmp;
+    cpu->x = cpu->read_tmp;
+    cpu->sp = cpu->read_tmp;
+
+    set_zero_and_negative(nes, cpu, cpu->read_tmp);
+}
+
+inline void xas(struct Nes* nes, struct CPU* cpu){
+    // unstable, skipping
+}
+
+inline void axs(struct Nes* nes, struct CPU* cpu){
+    fetch_addressed_value(nes, cpu);
+
+    cpu->x &= cpu->acc;
+    cpu->x - cpu->read_tmp;
+
+    set_higher_carry(nes, cpu, cpu->read_tmp);
+    set_zero_and_negative(nes, cpu, cpu->x);
+}
+
 inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, const uint8_t opcode) {
     if (nes_is_nmi(nes)) {
         handle_cpu_interrupt(nes, cpu, Interrupt_NMI);
@@ -682,235 +882,235 @@ inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, const u
         INSTRUCTION(0x00, brk, 1, 7, false, Addressing_NoneAddressing)
         INSTRUCTION(0x01, ora, 2, 6, false, Addressing_IndirectX)
         INSTRUCTION(0x02, kil, 1, 0, false, Addressing_NoneAddressing)
-        INSTRUCTION(0x03, nop, 2, 8, false, Addressing_IndirectX) // SLO
+        INSTRUCTION(0x03, slo, 2, 8, false, Addressing_IndirectX) // SLO
         INSTRUCTION(0x04, nop, 2, 3, false, Addressing_ZeroPage)
         INSTRUCTION(0x05, ora, 2, 3, false, Addressing_ZeroPage)
         INSTRUCTION(0x06, asl, 2, 5, false, Addressing_ZeroPage)
-        INSTRUCTION(0x07, nop, 2, 5, false, Addressing_ZeroPage) // SLO
+        INSTRUCTION(0x07, slo, 2, 5, false, Addressing_ZeroPage) // SLO
         INSTRUCTION(0x08, php, 1, 3, false, Addressing_NoneAddressing)
         INSTRUCTION(0x09, ora, 2, 2, false, Addressing_Immediate)
         INSTRUCTION(0x0a, asl, 1, 2, false, Addressing_Accumulator)
-        INSTRUCTION(0x0b, nop, 2, 2, false, Addressing_Immediate) // ANC
+        INSTRUCTION(0x0b, anc, 2, 2, false, Addressing_Immediate) // ANC
         INSTRUCTION(0x0c, nop, 3, 4, false, Addressing_Absolute)
         INSTRUCTION(0x0d, ora, 3, 4, false, Addressing_Absolute)
         INSTRUCTION(0x0e, asl, 3, 6, false, Addressing_Absolute)
-        INSTRUCTION(0x0f, nop, 3, 6, false, Addressing_Absolute) // SLO
+        INSTRUCTION(0x0f, slo, 3, 6, false, Addressing_Absolute) // SLO
         INSTRUCTION(0x10, bpl, 2, 2, true, /*(+1 if branch succeeds +2 if to a new page)*/ Addressing_Relative)
         INSTRUCTION(0x11, ora, 2, 5, true, /*+1 if page crossed*/ Addressing_IndirectY)
         INSTRUCTION(0x12, kil, 1, 0, false, Addressing_NoneAddressing)
-        INSTRUCTION(0x13, nop, 2, 8, false, Addressing_IndirectY) // SLO
+        INSTRUCTION(0x13, slo, 2, 8, false, Addressing_IndirectY) // SLO
         INSTRUCTION(0x14, nop, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0x15, ora, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0x16, asl, 2, 6, false, Addressing_ZeroPageX)
-        INSTRUCTION(0x17, nop, 2, 6, false, Addressing_ZeroPageX) // SLO
+        INSTRUCTION(0x17, slo, 2, 6, false, Addressing_ZeroPageX) // SLO
         INSTRUCTION(0x18, clc, 1, 2, false, Addressing_NoneAddressing)
         INSTRUCTION(0x19, ora, 3, 4, true, /*+1 if page crossed*/ Addressing_AbsoluteY)
         INSTRUCTION(0x1A, nop, 1, 2, false, Addressing_NoneAddressing)
-        INSTRUCTION(0x1b, nop, 3, 7, false, Addressing_AbsoluteY) // SLO
+        INSTRUCTION(0x1b, slo, 3, 7, false, Addressing_AbsoluteY) // SLO
         INSTRUCTION(0x1c, nop, 3, 4, true, /*+1 if page crossed*/ Addressing_AbsoluteX)
         INSTRUCTION(0x1d, ora, 3, 4, true, /*+1 if page crossed*/ Addressing_AbsoluteX)
         INSTRUCTION(0x1e, asl, 3, 7, false, Addressing_AbsoluteX)
-        INSTRUCTION(0x1f, nop, 3, 7, false, Addressing_AbsoluteX) // SLO
+        INSTRUCTION(0x1f, slo, 3, 7, false, Addressing_AbsoluteX) // SLO
         INSTRUCTION(0x20, jsr, 3, 6, false, Addressing_Absolute)
         INSTRUCTION(0x21, and, 2, 6, false, Addressing_IndirectX)
         INSTRUCTION(0x22, kil, 1, 0, false, Addressing_NoneAddressing)
-        INSTRUCTION(0x23, nop, 2, 8, false, Addressing_IndirectX) // RLA
+        INSTRUCTION(0x23, rla, 2, 8, false, Addressing_IndirectX) // RLA
         INSTRUCTION(0x24, bit, 2, 3, false, Addressing_ZeroPage)
         INSTRUCTION(0x25, and, 2, 3, false, Addressing_ZeroPage)
         INSTRUCTION(0x26, rol, 2, 5, false, Addressing_ZeroPage)
-        INSTRUCTION(0x27, nop, 2, 5, false, Addressing_ZeroPage) // RLA
+        INSTRUCTION(0x27, rla, 2, 5, false, Addressing_ZeroPage) // RLA
         INSTRUCTION(0x28, plp, 1, 4, false, Addressing_NoneAddressing)
         INSTRUCTION(0x29, and, 2, 2, false, Addressing_Immediate)
         INSTRUCTION(0x2a, rol, 1, 2, false, Addressing_Accumulator)
-        INSTRUCTION(0x2b, nop, 2, 2, false, Addressing_Immediate) // ANC (ANC2)
+        INSTRUCTION(0x2b, anc, 2, 2, false, Addressing_Immediate) // ANC (ANC2)
         INSTRUCTION(0x2c, bit, 3, 4, false, Addressing_Absolute)
         INSTRUCTION(0x2d, and, 3, 4, false, Addressing_Absolute)
         INSTRUCTION(0x2e, rol, 3, 6, false, Addressing_Absolute)
-        INSTRUCTION(0x2f, nop, 3, 6, false, Addressing_Absolute) // RLA
+        INSTRUCTION(0x2f, rla, 3, 6, false, Addressing_Absolute) // RLA
         INSTRUCTION(0x30, bmi, 2, 2, true, /*(+1 if branch succeeds +2 if to a new page)*/ Addressing_Relative)
         INSTRUCTION(0x31, and, 2, 5, true, /*+1 if page crossed*/ Addressing_IndirectY)
         INSTRUCTION(0x32, kil, 1, 0, false, Addressing_NoneAddressing)
-        INSTRUCTION(0x33, nop, 2, 8, false, Addressing_IndirectY) // RLA
+        INSTRUCTION(0x33, rla, 2, 8, false, Addressing_IndirectY) // RLA
         INSTRUCTION(0x34, nop, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0x35, and, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0x36, rol, 2, 6, false, Addressing_ZeroPageX)
-        INSTRUCTION(0x37, nop, 2, 6, false, Addressing_ZeroPageX) // RLA
+        INSTRUCTION(0x37, rla, 2, 6, false, Addressing_ZeroPageX) // RLA
         INSTRUCTION(0x38, sec, 1, 2, false, Addressing_NoneAddressing)
         INSTRUCTION(0x39, and, 3, 4, true, /*+1 if page crossed*/ Addressing_AbsoluteY)
         INSTRUCTION(0x3A, nop, 1, 2, false, Addressing_NoneAddressing)
-        INSTRUCTION(0x3b, nop, 3, 7, false, Addressing_AbsoluteY) // RLA
+        INSTRUCTION(0x3b, rla, 3, 7, false, Addressing_AbsoluteY) // RLA
         INSTRUCTION(0x3c, nop, 3, 4, true, /*+1 if page crossed*/ Addressing_AbsoluteX)
         INSTRUCTION(0x3d, and, 3, 4, true, /*+1 if page crossed*/ Addressing_AbsoluteX)
         INSTRUCTION(0x3e, rol, 3, 7, false, Addressing_AbsoluteX)
-        INSTRUCTION(0x3f, nop, 3, 7, false, Addressing_AbsoluteX) // RLA
+        INSTRUCTION(0x3f, rla, 3, 7, false, Addressing_AbsoluteX) // RLA
         INSTRUCTION(0x40, rti, 1, 6, false, Addressing_NoneAddressing)
         INSTRUCTION(0x41, eor, 2, 6, false, Addressing_IndirectX)
         INSTRUCTION(0x42, kil, 1, 0, false, Addressing_NoneAddressing)
-        INSTRUCTION(0x43, nop, 2, 8, false, Addressing_IndirectX) // SRE
+        INSTRUCTION(0x43, sre, 2, 8, false, Addressing_IndirectX) // SRE
         INSTRUCTION(0x44, nop, 2, 3, false, Addressing_ZeroPage)
         INSTRUCTION(0x45, eor, 2, 3, false, Addressing_ZeroPage)
         INSTRUCTION(0x46, lsr, 2, 5, false, Addressing_ZeroPage)
-        INSTRUCTION(0x47, nop, 2, 5, false, Addressing_ZeroPage) // SRE
+        INSTRUCTION(0x47, sre, 2, 5, false, Addressing_ZeroPage) // SRE
         INSTRUCTION(0x48, pha, 1, 3, false, Addressing_NoneAddressing)
         INSTRUCTION(0x49, eor, 2, 2, false, Addressing_Immediate)
         INSTRUCTION(0x4a, lsr, 1, 2, false, Addressing_Accumulator)
-        INSTRUCTION(0x4b, nop, 2, 2, false, Addressing_Immediate) // ALR (ASR)
+        INSTRUCTION(0x4b, asr, 2, 2, false, Addressing_Immediate) // ALR (ASR)
         INSTRUCTION(0x4c, jmp, 3, 3, false, Addressing_Absolute) //AddressingMode that acts as Immidiate
         INSTRUCTION(0x4d, eor, 3, 4, false, Addressing_Absolute)
         INSTRUCTION(0x4e, lsr, 3, 6, false, Addressing_Absolute)
-        INSTRUCTION(0x4f, nop, 3, 6, false, Addressing_Absolute) // SRE
+        INSTRUCTION(0x4f, sre, 3, 6, false, Addressing_Absolute) // SRE
         INSTRUCTION(0x50, bvc, 2, 2, true, /*(+1 if branch succeeds +2 if to a new page)*/ Addressing_Relative)
         INSTRUCTION(0x51, eor, 2, 5, true, /*+1 if page crossed*/ Addressing_IndirectY)
         INSTRUCTION(0x52, kil, 1, 0, false, Addressing_NoneAddressing)
-        INSTRUCTION(0x53, nop, 2, 8, false, Addressing_IndirectY) // SRE
+        INSTRUCTION(0x53, sre, 2, 8, false, Addressing_IndirectY) // SRE
         INSTRUCTION(0x54, nop, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0x55, eor, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0x56, lsr, 2, 6, false, Addressing_ZeroPageX)
-        INSTRUCTION(0x57, nop, 2, 6, false, Addressing_ZeroPageX) // SRE
+        INSTRUCTION(0x57, sre, 2, 6, false, Addressing_ZeroPageX) // SRE
         INSTRUCTION(0x58, cli, 1, 2, false, Addressing_NoneAddressing)
         INSTRUCTION(0x59, eor, 3, 4, true, /*+1 if page crossed*/ Addressing_AbsoluteY)
         INSTRUCTION(0x5A, nop, 1, 2, false, Addressing_NoneAddressing)
-        INSTRUCTION(0x5b, nop, 3, 7, false, Addressing_AbsoluteY) // SRE
+        INSTRUCTION(0x5b, sre, 3, 7, false, Addressing_AbsoluteY) // SRE
         INSTRUCTION(0x5c, nop, 3, 4, true, /*+1 if page crossed*/ Addressing_AbsoluteX)
         INSTRUCTION(0x5d, eor, 3, 4, true, /*+1 if page crossed*/ Addressing_AbsoluteX)
         INSTRUCTION(0x5e, lsr, 3, 7, false, Addressing_AbsoluteX)
-        INSTRUCTION(0x5f, nop, 3, 7, false, Addressing_AbsoluteX) // SRE
+        INSTRUCTION(0x5f, sre, 3, 7, false, Addressing_AbsoluteX) // SRE
         INSTRUCTION(0x60, rts, 1, 6, false, Addressing_NoneAddressing)
         INSTRUCTION(0x61, adc, 2, 6, false, Addressing_IndirectX)
         INSTRUCTION(0x62, kil, 1, 0, false, Addressing_NoneAddressing)
-        INSTRUCTION(0x63, nop, 2, 8, false, Addressing_IndirectX) // RRA
+        INSTRUCTION(0x63, rra, 2, 8, false, Addressing_IndirectX) // RRA
         INSTRUCTION(0x64, nop, 2, 3, false, Addressing_ZeroPage)
         INSTRUCTION(0x65, adc, 2, 3, false, Addressing_ZeroPage)
         INSTRUCTION(0x66, ror, 2, 5, false, Addressing_ZeroPage)
-        INSTRUCTION(0x67, nop, 2, 5, false, Addressing_ZeroPage) // RRA
+        INSTRUCTION(0x67, rra, 2, 5, false, Addressing_ZeroPage) // RRA
         INSTRUCTION(0x68, pla, 1, 4, false, Addressing_NoneAddressing)
         INSTRUCTION(0x69, adc, 2, 2, false, Addressing_Immediate)
         INSTRUCTION(0x6a, ror, 1, 2, false, Addressing_Accumulator)
-        INSTRUCTION(0x6b, nop, 2, 2, false, Addressing_Immediate) // ARR
+        INSTRUCTION(0x6b, arr, 2, 2, false, Addressing_Immediate) // ARR
         INSTRUCTION(0x6c, jmp, 3, 5, false, Addressing_Indirect)
         INSTRUCTION(0x6d, adc, 3, 4, false, Addressing_Absolute)
         INSTRUCTION(0x6e, ror, 3, 6, false, Addressing_Absolute)
-        INSTRUCTION(0x6f, nop, 3, 6, false, Addressing_Absolute) // RRA
+        INSTRUCTION(0x6f, rra, 3, 6, false, Addressing_Absolute) // RRA
         INSTRUCTION(0x70, bvs, 2, 2, true, /*(+1 if branch succeeds +2 if to a new page)*/ Addressing_Relative)
         INSTRUCTION(0x71, adc, 2, 5, true, /*+1 if page crossed*/ Addressing_IndirectY)
         INSTRUCTION(0x72, kil, 1, 0, false, Addressing_NoneAddressing)
-        INSTRUCTION(0x73, nop, 2, 8, false, Addressing_IndirectY) // RRA
+        INSTRUCTION(0x73, rra, 2, 8, false, Addressing_IndirectY) // RRA
         INSTRUCTION(0x74, nop, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0x75, adc, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0x76, ror, 2, 6, false, Addressing_ZeroPageX)
-        INSTRUCTION(0x77, nop, 2, 6, false, Addressing_ZeroPageX) // RRA
+        INSTRUCTION(0x77, rra, 2, 6, false, Addressing_ZeroPageX) // RRA
         INSTRUCTION(0x78, sei, 1, 2, false, Addressing_NoneAddressing)
         INSTRUCTION(0x79, adc, 3, 4, true, /*+1 if page crossed*/ Addressing_AbsoluteY)
         INSTRUCTION(0x7A, nop, 1, 2, false, Addressing_NoneAddressing)
-        INSTRUCTION(0x7b, nop, 3, 7, false, Addressing_AbsoluteY) // RRA
+        INSTRUCTION(0x7b, rra, 3, 7, false, Addressing_AbsoluteY) // RRA
         INSTRUCTION(0x7c, nop, 3, 4, true,/*+1 if page crossed*/ Addressing_AbsoluteX)
         INSTRUCTION(0x7d, adc, 3, 4, true, /*+1 if page crossed*/ Addressing_AbsoluteX)
         INSTRUCTION(0x7e, ror, 3, 7, false, Addressing_AbsoluteX)
-        INSTRUCTION(0x7f, nop, 3, 7, false, Addressing_AbsoluteX) // RRA
+        INSTRUCTION(0x7f, rra, 3, 7, false, Addressing_AbsoluteX) // RRA
         INSTRUCTION(0x80, nop, 2, 2, false, Addressing_Immediate)
         INSTRUCTION(0x81, sta, 2, 6, false, Addressing_IndirectX)
         INSTRUCTION(0x82, nop, 2, 2, false, Addressing_Immediate)
-        INSTRUCTION(0x83, nop, 2, 6, false, Addressing_IndirectX) // SAX
+        INSTRUCTION(0x83, sax, 2, 6, false, Addressing_IndirectX) // SAX
         INSTRUCTION(0x84, sty, 2, 3, false, Addressing_ZeroPage)
         INSTRUCTION(0x85, sta, 2, 3, false, Addressing_ZeroPage)
         INSTRUCTION(0x86, stx, 2, 3, false, Addressing_ZeroPage)
-        INSTRUCTION(0x87, nop, 2, 3, false, Addressing_ZeroPage) // SAX
+        INSTRUCTION(0x87, sax, 2, 3, false, Addressing_ZeroPage) // SAX
         INSTRUCTION(0x88, dey, 1, 2, false, Addressing_NoneAddressing)
         INSTRUCTION(0x89, nop, 2, 2, false, Addressing_Immediate)
         INSTRUCTION(0x8a, txa, 1, 2, false, Addressing_NoneAddressing)
-        INSTRUCTION(0x8b, nop, 2, 2, false, Addressing_Immediate) // XAA
+        INSTRUCTION(0x8b, xaa, 2, 2, false, Addressing_Immediate) // XAA
         INSTRUCTION(0x8c, sty, 3, 4, false, Addressing_Absolute)
         INSTRUCTION(0x8d, sta, 3, 4, false, Addressing_Absolute)
         INSTRUCTION(0x8e, stx, 3, 4, false, Addressing_Absolute)
-        INSTRUCTION(0x8f, nop, 3, 4, false, Addressing_Absolute) // SAX
+        INSTRUCTION(0x8f, sax, 3, 4, false, Addressing_Absolute) // SAX
         INSTRUCTION(0x90, bcc, 2, 2, true, /*(+1 if branch succeeds +2 if to a new page)*/ Addressing_Relative)
         INSTRUCTION(0x91, sta, 2, 6, false, Addressing_IndirectY)
         INSTRUCTION(0x92, kil, 1, 0, false, Addressing_NoneAddressing)
-        INSTRUCTION(0x93, nop, 2, 6, false, Addressing_IndirectY) // AXA
+        INSTRUCTION(0x93, axa, 2, 6, false, Addressing_IndirectY) // AXA
         INSTRUCTION(0x94, sty, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0x95, sta, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0x96, stx, 2, 4, false, Addressing_ZeroPageY)
-        INSTRUCTION(0x97, nop, 2, 4, false, Addressing_ZeroPageY) // SAX
+        INSTRUCTION(0x97, sax, 2, 4, false, Addressing_ZeroPageY) // SAX
         INSTRUCTION(0x98, tya, 1, 2, false, Addressing_NoneAddressing)
         INSTRUCTION(0x99, sta, 3, 5, false, Addressing_AbsoluteY)
         INSTRUCTION(0x9a, txs, 1, 2, false, Addressing_NoneAddressing)
-        INSTRUCTION(0x9b, nop, 3, 5, false, Addressing_AbsoluteY) // XAS
-        INSTRUCTION(0x9c, nop, 3, 5, false, Addressing_AbsoluteX) // SYA
+        INSTRUCTION(0x9b, xas, 3, 5, false, Addressing_AbsoluteY) // XAS
+        INSTRUCTION(0x9c, sya, 3, 5, false, Addressing_AbsoluteX) // SYA
         INSTRUCTION(0x9d, sta, 3, 5, false, Addressing_AbsoluteX)
-        INSTRUCTION(0x9e, nop, 3, 5, false, Addressing_AbsoluteY) // SXA
-        INSTRUCTION(0x9f, nop, 3, 5, false, Addressing_AbsoluteY) // AXA
+        INSTRUCTION(0x9e, sxa, 3, 5, false, Addressing_AbsoluteY) // SXA
+        INSTRUCTION(0x9f, axa, 3, 5, false, Addressing_AbsoluteY) // AXA
         INSTRUCTION(0xa0, ldy, 2, 2, false, Addressing_Immediate)
         INSTRUCTION(0xa1, lda, 2, 6, false, Addressing_IndirectX)
         INSTRUCTION(0xa2, ldx, 2, 2, false, Addressing_Immediate)
-        INSTRUCTION(0xa3, nop, 2, 6, false, Addressing_IndirectX) // LAX
+        INSTRUCTION(0xa3, lax, 2, 6, false, Addressing_IndirectX) // LAX
         INSTRUCTION(0xa4, ldy, 2, 3, false, Addressing_ZeroPage)
         INSTRUCTION(0xa5, lda, 2, 3, false, Addressing_ZeroPage)
         INSTRUCTION(0xa6, ldx, 2, 3, false, Addressing_ZeroPage)
-        INSTRUCTION(0xa7, nop, 2, 3, false, Addressing_ZeroPage) // LAX
+        INSTRUCTION(0xa7, lax, 2, 3, false, Addressing_ZeroPage) // LAX
         INSTRUCTION(0xa8, tay, 1, 2, false, Addressing_NoneAddressing)
         INSTRUCTION(0xa9, lda, 2, 2, false, Addressing_Immediate)
         INSTRUCTION(0xaa, tax, 1, 2, false, Addressing_NoneAddressing)
-        INSTRUCTION(0xab, nop, 2, 2, false, Addressing_Immediate) // ATX
+        INSTRUCTION(0xab, atx, 2, 2, false, Addressing_Immediate) // ATX
         INSTRUCTION(0xac, ldy, 3, 4, false, Addressing_Absolute)
         INSTRUCTION(0xad, lda, 3, 4, false, Addressing_Absolute)
         INSTRUCTION(0xae, ldx, 3, 4, false, Addressing_Absolute)
-        INSTRUCTION(0xaf, nop, 3, 4, false, Addressing_Absolute) // LAX
+        INSTRUCTION(0xaf, lax, 3, 4, false, Addressing_Absolute) // LAX
         INSTRUCTION(0xb0, bcs, 2, 2, true, /*(+1 if branch succeeds +2 if to a new page)*/ Addressing_Relative)
         INSTRUCTION(0xb1, lda, 2, 5, true, /*+1 if page crossed*/ Addressing_IndirectY)
         INSTRUCTION(0xb2, kil, 1, 0, false, Addressing_NoneAddressing)
-        INSTRUCTION(0xb3, nop, 2, 5, false, Addressing_IndirectY) // LAX
+        INSTRUCTION(0xb3, lax, 2, 5, false, Addressing_IndirectY) // LAX
         INSTRUCTION(0xb4, ldy, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0xb5, lda, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0xb6, ldx, 2, 4, false, Addressing_ZeroPageY)
-        INSTRUCTION(0xb7, nop, 2, 4, false, Addressing_ZeroPageY) // LAX
+        INSTRUCTION(0xb7, lax, 2, 4, false, Addressing_ZeroPageY) // LAX
         INSTRUCTION(0xb8, clv, 1, 2, false, Addressing_NoneAddressing)
         INSTRUCTION(0xb9, lda, 3, 4, true, /*+1 if page crossed*/ Addressing_AbsoluteY)
         INSTRUCTION(0xba, tsx, 1, 2, false, Addressing_NoneAddressing)
-        INSTRUCTION(0xbb, nop, 3, 4, false, Addressing_AbsoluteY) // LAR
+        INSTRUCTION(0xbb, lar, 3, 4, false, Addressing_AbsoluteY) // LAR
         INSTRUCTION(0xbc, ldy, 3, 4, true, /*+1 if page crossed*/ Addressing_AbsoluteX)
         INSTRUCTION(0xbd, lda, 3, 4, true, /*+1 if page crossed*/ Addressing_AbsoluteX)
         INSTRUCTION(0xbe, ldx, 3, 4, true, /*+1 if page crossed*/ Addressing_AbsoluteY)
-        INSTRUCTION(0xbf, nop, 3, 4, false, Addressing_AbsoluteY) // LAX
+        INSTRUCTION(0xbf, lax, 3, 4, false, Addressing_AbsoluteY) // LAX
         INSTRUCTION(0xc0, cpy, 2, 2, false, Addressing_Immediate)
         INSTRUCTION(0xc1, cmp, 2, 6, false, Addressing_IndirectX)
         INSTRUCTION(0xc2, nop, 2, 2, false, Addressing_Immediate)
-        INSTRUCTION(0xc3, nop, 2, 8, false, Addressing_IndirectX) // DCP
+        INSTRUCTION(0xc3, dcp, 2, 8, false, Addressing_IndirectX) // DCP
         INSTRUCTION(0xc4, cpy, 2, 3, false, Addressing_ZeroPage)
         INSTRUCTION(0xc5, cmp, 2, 3, false, Addressing_ZeroPage)
         INSTRUCTION(0xc6, dec, 2, 5, false, Addressing_ZeroPage)
-        INSTRUCTION(0xc7, nop, 2, 5, false, Addressing_ZeroPage) // DCP
+        INSTRUCTION(0xc7, dcp, 2, 5, false, Addressing_ZeroPage) // DCP
         INSTRUCTION(0xc8, iny, 1, 2, false, Addressing_NoneAddressing)
         INSTRUCTION(0xc9, cmp, 2, 2, false, Addressing_Immediate)
         INSTRUCTION(0xca, dex, 1, 2, false, Addressing_NoneAddressing)
-        INSTRUCTION(0xcb, nop, 2, 2, false, Addressing_Immediate) // AXS
+        INSTRUCTION(0xcb, axs, 2, 2, false, Addressing_Immediate) // AXS
         INSTRUCTION(0xcc, cpy, 3, 4, false, Addressing_Absolute)
         INSTRUCTION(0xcd, cmp, 3, 4, false, Addressing_Absolute)
         INSTRUCTION(0xce, dec, 3, 6, false, Addressing_Absolute)
-        INSTRUCTION(0xcf, nop, 3, 6, false, Addressing_Absolute) // DCP
+        INSTRUCTION(0xcf, dcp, 3, 6, false, Addressing_Absolute) // DCP
         INSTRUCTION(0xd0, bne, 2, 2, true, /*(+1 if branch succeeds +2 if to a new page)*/ Addressing_Relative)
         INSTRUCTION(0xd1, cmp, 2, 5, true, /*+1 if page crossed*/ Addressing_IndirectY)
         INSTRUCTION(0xd2, kil, 1, 0, false, Addressing_NoneAddressing)
-        INSTRUCTION(0xd3, nop, 2, 8, false, Addressing_IndirectY) // DCP
+        INSTRUCTION(0xd3, dcp, 2, 8, false, Addressing_IndirectY) // DCP
         INSTRUCTION(0xd4, nop, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0xd5, cmp, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0xd6, dec, 2, 6, false, Addressing_ZeroPageX)
-        INSTRUCTION(0xd7, nop, 2, 6, false, Addressing_ZeroPageX) // DCP
+        INSTRUCTION(0xd7, dcp, 2, 6, false, Addressing_ZeroPageX) // DCP
         INSTRUCTION(0xD8, cld, 1, 2, false, Addressing_NoneAddressing)
         INSTRUCTION(0xd9, cmp, 3, 4, true, /*+1 if page crossed*/ Addressing_AbsoluteY)
         INSTRUCTION(0xda, nop, 1, 2, false, Addressing_NoneAddressing)
-        INSTRUCTION(0xdb, nop, 3, 7, false, Addressing_AbsoluteY) // DCP
+        INSTRUCTION(0xdb, dcp, 3, 7, false, Addressing_AbsoluteY) // DCP
         INSTRUCTION(0xdc, nop, 3, 4, true, /*+1 if page crossed*/ Addressing_AbsoluteX)
         INSTRUCTION(0xdd, cmp, 3, 4, true, /*+1 if page crossed*/ Addressing_AbsoluteX)
         INSTRUCTION(0xde, dec, 3, 7, false, Addressing_AbsoluteX)
-        INSTRUCTION(0xdf, nop, 3, 7, false, Addressing_AbsoluteX) // DCP
+        INSTRUCTION(0xdf, dcp, 3, 7, false, Addressing_AbsoluteX) // DCP
         INSTRUCTION(0xe0, cpx, 2, 2, false, Addressing_Immediate)
         INSTRUCTION(0xe1, sbc, 2, 6, false, Addressing_IndirectX)
         INSTRUCTION(0xe2, nop, 2, 2, false, Addressing_Immediate)
-        INSTRUCTION(0xe3, nop, 2, 8, false, Addressing_IndirectX) // ISB
+        INSTRUCTION(0xe3, isb, 2, 8, false, Addressing_IndirectX) // ISB
         INSTRUCTION(0xe4, cpx, 2, 3, false, Addressing_ZeroPage)
         INSTRUCTION(0xe5, sbc, 2, 3, false, Addressing_ZeroPage)
         INSTRUCTION(0xe6, inc, 2, 5, false, Addressing_ZeroPage)
-        INSTRUCTION(0xe7, nop, 2, 5, false, Addressing_ZeroPage) // ISB
+        INSTRUCTION(0xe7, isb, 2, 5, false, Addressing_ZeroPage) // ISB
         INSTRUCTION(0xe8, inx, 1, 2, false, Addressing_NoneAddressing)
         INSTRUCTION(0xe9, sbc, 2, 2, false, Addressing_Immediate)
         INSTRUCTION(0xea, nop, 1, 2, false, Addressing_NoneAddressing)
@@ -918,23 +1118,23 @@ inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, const u
         INSTRUCTION(0xec, cpx, 3, 4, false, Addressing_Absolute)
         INSTRUCTION(0xed, sbc, 3, 4, false, Addressing_Absolute)
         INSTRUCTION(0xee, inc, 3, 6, false, Addressing_Absolute)
-        INSTRUCTION(0xef, nop, 3, 6, false, Addressing_Absolute) // ISB
+        INSTRUCTION(0xef, isb, 3, 6, false, Addressing_Absolute) // ISB
         INSTRUCTION(0xf0, beq, 2, 2, true, /*(+1 if branch succeeds +2 if to a new page)*/ Addressing_Relative)
         INSTRUCTION(0xf1, sbc, 2, 5, true, /*+1 if page crossed*/ Addressing_IndirectY)
         INSTRUCTION(0xf2, kil, 1, 0, false, Addressing_NoneAddressing)
-        INSTRUCTION(0xf3, nop, 2, 8, false, Addressing_IndirectY) // ISB
+        INSTRUCTION(0xf3, isb, 2, 8, false, Addressing_IndirectY) // ISB
         INSTRUCTION(0xf4, nop, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0xf5, sbc, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0xf6, inc, 2, 6, false, Addressing_ZeroPageX)
-        INSTRUCTION(0xf7, nop, 2, 6, false, Addressing_ZeroPageX) // ISB
+        INSTRUCTION(0xf7, isb, 2, 6, false, Addressing_ZeroPageX) // ISB
         INSTRUCTION(0xf8, sed, 1, 2, false, Addressing_NoneAddressing)
         INSTRUCTION(0xf9, sbc, 3, 4, true, /*+1 if page crossed*/ Addressing_AbsoluteY)
         INSTRUCTION(0xfa, nop, 1, 2, false, Addressing_NoneAddressing)
-        INSTRUCTION(0xfb, nop, 3, 7, false, Addressing_AbsoluteY) // ISB
+        INSTRUCTION(0xfb, isb, 3, 7, false, Addressing_AbsoluteY) // ISB
         INSTRUCTION(0xfc, nop, 3, 4, true, /*+1 if page crossed*/ Addressing_AbsoluteX)
         INSTRUCTION(0xfd, sbc, 3, 4, true, /*+1 if page crossed*/ Addressing_AbsoluteX)
         INSTRUCTION(0xfe, inc, 3, 7, false, Addressing_AbsoluteX)
-        INSTRUCTION(0xff, nop, 3, 7, false, Addressing_AbsoluteX) // ISB
+        INSTRUCTION(0xff, isb, 3, 7, false, Addressing_AbsoluteX) // ISB
         default:
             // Just putting this here so we don't get c warning, and intentionally cause crash
             int* p = nullptr;

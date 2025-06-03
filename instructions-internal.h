@@ -9,34 +9,34 @@
 void set_zero_and_negative(struct Nes* nes, struct CPU* cpu, uint8_t value);
 bool is_page_cross(uint16_t base, uint16_t addr);
 
-uint8_t get_address(const struct Nes* nes, struct CPU* cpu, enum AddressingMode mode, bool can_page_cross);
-void write_address(const struct Nes* nes, struct CPU* cpu, const uint8_t val, const enum AddressingMode mode);
+uint8_t get_address(struct Nes* nes, struct CPU* cpu, enum AddressingMode mode, bool can_page_cross);
+void write_address(struct Nes* nes, struct CPU* cpu, const uint8_t val, const enum AddressingMode mode);
 
 void fetch_addressed_value(struct Nes* nes, struct CPU* cpu);
 void update_addressed_value(struct Nes* nes, struct CPU* cpu);
 
-void brk(const struct Nes* nes, struct CPU* cpu);
+void brk(struct Nes* nes, struct CPU* cpu);
 void ora(struct Nes* nes, struct CPU* cpu);
 void kil(struct Nes* nes, struct CPU* cpu);
 void asl(struct Nes* nes, struct CPU* cpu);
-void php(const struct Nes* nes, struct CPU* cpu);
+void php(struct Nes* nes, struct CPU* cpu);
 void bpl(struct Nes* nes, struct CPU* cpu);
 void clc(struct Nes* nes, struct CPU* cpu);
-void jsr(const struct Nes* nes, struct CPU* cpu);
+void jsr(struct Nes* nes, struct CPU* cpu);
 void and(struct Nes* nes, struct CPU* cpu);
 void bit(struct Nes* nes, struct CPU* cpu);
 void rol(struct Nes* nes, struct CPU* cpu);
-void plp(const struct Nes* nes, struct CPU* cpu);
+void plp(struct Nes* nes, struct CPU* cpu);
 void bmi(struct Nes* nes, struct CPU* cpu);
 void sec(struct Nes* nes, struct CPU* cpu);
-void rti(const struct Nes* nes, struct CPU* cpu);
+void rti(struct Nes* nes, struct CPU* cpu);
 void eor(struct Nes* nes, struct CPU* cpu);
 void lsr(struct Nes* nes, struct CPU* cpu);
-void pha(const struct Nes* nes, struct CPU* cpu);
-void jmp(const struct Nes* nes, struct CPU* cpu);
+void pha(struct Nes* nes, struct CPU* cpu);
+void jmp(struct Nes* nes, struct CPU* cpu);
 void bvc(struct Nes* nes, struct CPU* cpu);
 void cli(struct Nes* nes, struct CPU* cpu);
-void rts(const struct Nes* nes, struct CPU* cpu);
+void rts(struct Nes* nes, struct CPU* cpu);
 void adc(struct Nes* nes, struct CPU* cpu);
 void ror(struct Nes* nes, struct CPU* cpu);
 void pla(struct Nes* nes, struct CPU* cpu);
@@ -72,5 +72,26 @@ void inx(struct Nes* nes, struct CPU* cpu);
 void nop(struct Nes* nes, struct CPU* cpu);
 void beq(struct Nes* nes, struct CPU* cpu);
 void sed(struct Nes* nes, struct CPU* cpu);
+
+// illegal
+void slo(struct Nes* nes, struct CPU* cpu);
+void anc(struct Nes* nes, struct CPU* cpu);
+void rla(struct Nes* nes, struct CPU* cpu);
+void sre(struct Nes* nes, struct CPU* cpu);
+void asr(struct Nes* nes, struct CPU* cpu);
+void rra(struct Nes* nes, struct CPU* cpu);
+void arr(struct Nes* nes, struct CPU* cpu);
+void xaa(struct Nes* nes, struct CPU* cpu);
+void sax(struct Nes* nes, struct CPU* cpu);
+void sya(struct Nes* nes, struct CPU* cpu);
+void sxa(struct Nes* nes, struct CPU* cpu);
+void axa(struct Nes* nes, struct CPU* cpu);
+void atx(struct Nes* nes, struct CPU* cpu);
+void dcp(struct Nes* nes, struct CPU* cpu);
+void isb(struct Nes* nes, struct CPU* cpu);
+void lax(struct Nes* nes, struct CPU* cpu);
+void lar(struct Nes* nes, struct CPU* cpu);
+void xas(struct Nes* nes, struct CPU* cpu);
+void axs(struct Nes* nes, struct CPU* cpu);
 
 #endif //INSTRUCTIONS_INTERNAL_H
