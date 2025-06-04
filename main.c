@@ -33,7 +33,7 @@ int main(void) {
     SetAudioStreamBufferSizeDefault(1024);
     const AudioStream stream = LoadAudioStream(41000, 16, 1);
 
-    core = get_core_for_file("/media/games/nestest.nes");
+    core = get_core_for_file("/media/games/dk.nes");
 
     SetAudioStreamCallback(stream, get_samples);
     PlayAudioStream(stream);
@@ -43,7 +43,6 @@ int main(void) {
     UnloadImage(blank);
 
     char* title = malloc(100);
-
     while (!WindowShouldClose()) {
         core_read_inputs(core);
 

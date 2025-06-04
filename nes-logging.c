@@ -313,10 +313,11 @@ void write_current_status_log(struct Nes* nes) {
         addresses[i] = ' ';
     }
 
+    // %s
+    //mem_values,
    printf(
-        "%04X  %s  %s %s  A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:  %d, %d CYC:%lu\n",
+        "%04X: %s %s  A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:  %d, %d CYC:%lu\n",
         nes->cpu->pc,
-        mem_values,
         instruction.name,
         addresses,
         nes->cpu->acc,
