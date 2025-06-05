@@ -54,6 +54,8 @@ struct Cartridge* nes_cartridge_load_from_file(const char* file_path) {
 
 struct Cartridge* nes_cartridge_load_from_buffer(const uint8_t* buffer, const long size) {
     struct Cartridge* cartridge = malloc(sizeof(struct Cartridge));
+
+#ifndef TESTS
     if (!(buffer[NES_TAG_1] == 'N' &&
           buffer[NES_TAG_2] == 'E' &&
           buffer[NES_TAG_3] == 'S' &&
@@ -62,10 +64,11 @@ struct Cartridge* nes_cartridge_load_from_buffer(const uint8_t* buffer, const lo
 
         return nullptr;
     }
+#endif
 
     const bool is_ines = buffer[INES_DETECTION] == 0x00;
 
-    const int prg_rom_size = buffer[INES_PRG_ROM_SIZE] * INES_PRG_ROM_BANK_SIZE;
+    int prg_rom_size = buffer[INES_PRG_ROM_SIZE] * INES_PRG_ROM_BANK_SIZE;
     int chr_rom_size = buffer[INES_CHR_ROM_SIZE] * INES_CHR_ROM_BANK_SIZE;
     int prg_ram_size = buffer[INES_PRG_RAM_SIZE] * INES_PRG_RAM_BANK_SIZE;
 
@@ -92,6 +95,10 @@ struct Cartridge* nes_cartridge_load_from_buffer(const uint8_t* buffer, const lo
         printf("NES 2.0 not supported yet!!!\n");
         return nullptr;
     }
+
+#ifdef TESTS
+    prg_ram_size = 0xFFFF;
+#endif
 
     cartridge->mapper = mapper;
     cartridge->mirroring = mirroring;
@@ -125,20 +132,11 @@ void nes_cartridge_free(struct Cartridge* cartridge) {
     free(cartridge);
 }
 
-inline uint8_t* nes_cartridge_get_addr_ptr(const struct Cartridge* cartridge, uint16_t addr) {
-    if (addr <= RAM_MIRRORS_END) {
-        return &cartridge->prg_ram[addr & 0x7FF];
-    } else if (addr >= PRG_ROM_START && addr <= PRG_ROM_END) {
-        addr -= PRG_ROM_START;
-        addr %= cartridge->prg_rom_size;
-        return &cartridge->prg_rom[addr];
-    }
-
-    printf("Tried reading non-implemented address %04x\n", addr);
-    return &cartridge->prg_ram[0];
-}
-
 inline uint8_t nes_cartridge_read_char(const struct Cartridge* cartridge, uint16_t addr) {
+#ifdef TESTS
+    return cartridge->prg_ram[addr];
+#endif
+
     if (addr <= RAM_MIRRORS_END) {
         return cartridge->prg_ram[addr & 0x7FF];
     } else if (addr >= PRG_ROM_START && addr <= PRG_ROM_END) {
@@ -150,6 +148,11 @@ inline uint8_t nes_cartridge_read_char(const struct Cartridge* cartridge, uint16
     return 0;
 }
 inline void nes_cartridge_write_char(const struct Cartridge* cartridge, uint16_t addr, const uint8_t val) {
+#ifdef TESTS
+    cartridge->prg_ram[addr] = val;
+    return;
+#endif
+
     if (addr <= RAM_MIRRORS_END) {
         // if (addr == 0x02 || addr == 0x03)
         //     printf("%d: %02x\n", addr, val);

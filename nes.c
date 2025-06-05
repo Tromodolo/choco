@@ -31,6 +31,7 @@ struct Nes* nes_init_from_buffer(const uint8_t* buffer, const long size) {
 
     nes->cartridge = nes_cartridge_load_from_buffer(buffer, size);
     nes->cpu =  nes_cpu_init(nes);
+    nes->ppu = ppu_init(nes);
 
     return nes;
 }
@@ -67,6 +68,10 @@ void nes_read_inputs(struct Nes* nes) {
 }
 
 inline uint8_t nes_read_char(struct Nes* nes, const uint16_t addr) {
+#ifdef TESTS
+    return nes->cartridge->prg_ram[addr];
+#endif
+
     bool is_hardware_register = false;
     const uint8_t hw_value = read_hw_register(nes, addr, &is_hardware_register);
     if (is_hardware_register) {
@@ -76,6 +81,11 @@ inline uint8_t nes_read_char(struct Nes* nes, const uint16_t addr) {
     return nes_cartridge_read_char(nes->cartridge, addr);
 }
 inline void nes_write_char(struct Nes* nes, const uint16_t addr, const uint8_t val) {
+#ifdef TESTS
+    nes->cartridge->prg_ram[addr] = val;
+    return;
+#endif
+
     bool is_hardware_register = false;
     write_hw_register(nes, addr, val, &is_hardware_register);
     if (is_hardware_register) {

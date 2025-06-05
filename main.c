@@ -21,10 +21,10 @@ void get_samples(void *bufferData, const unsigned int frames){
 }
 
 int main(void) {
-    if(getenv("TESTS")) {
+#ifdef TESTS
         run_tests();
         return 0;
-    }
+#endif
 
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Hallo");
     SetTargetFPS(144);
