@@ -9,6 +9,7 @@ case opcode: {\
     cpu->current_addressing_mode = addressing; \
     cpu->can_page_cross = canpagecross; \
     cpu->pc_pre = cpu->pc; \
+    cpu->did_branch = false; \
     \
     func(nes, cpu); \
     \
@@ -49,11 +50,10 @@ bool is_page_cross(const uint16_t base, const uint16_t addr) {
 }
 
 void branch(struct Nes* nes, struct CPU* cpu, const bool condition, const uint8_t value) {
-    cpu->did_branch = condition;
-
     if (!condition)
         return;
 
+    cpu->did_branch = true;
 
     cpu->waiting_cycles += 1;
     const int8_t offset = (int8_t)(value);
