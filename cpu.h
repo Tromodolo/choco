@@ -46,6 +46,7 @@ struct CPU {
     enum AddressingMode current_addressing_mode;
     bool can_page_cross;
     uint8_t read_tmp;
+    bool did_branch;
 
     uint64_t total_cycles;
 

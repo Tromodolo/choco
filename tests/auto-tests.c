@@ -1,10 +1,9 @@
 #include <stdlib.h>
 
-#include "auto/auto-tests.h"
+#include "auto-tests.h"
 
 #include <assert.h>
 #include <stdio.h>
-#include <string.h>
 
 #include "../cartridge.h"
 #include "../cpu.h"
@@ -322,8 +321,6 @@ void run_auto_tests() {
             const cJSON* c_final_values = c_initial_values->next;
             const cJSON* c_cycles = c_final_values->next;
 
-            const char* name = c_name->valuestring;
-
             const cJSON* c_pc = c_initial_values->child;
             const cJSON* c_sp = c_pc->next;
             const cJSON* c_acc = c_sp->next;
@@ -370,6 +367,8 @@ void run_auto_tests() {
             if (!success)
                 incorrect_registers = true;
 
+            // assert(!incorrect_registers);
+
             const cJSON* c_final_ram_set = c_final_ram->child;
             while (c_final_ram_set) {
                 const cJSON* c_final_ram_addr = c_final_ram_set->child;
@@ -379,6 +378,8 @@ void run_auto_tests() {
 
                 if (!success)
                     incorrect_memory = true;
+
+                // assert(!incorrect_memory);
 
                 c_final_ram_set = c_final_ram_set->next;
             }
@@ -393,6 +394,8 @@ void run_auto_tests() {
             success &= nes->cpu->total_cycles == total_cycle_count;
             if (!success)
                 incorrect_cycles = true;
+
+            // assert(!incorrect_cycles);
 
             nes_free(nes);
             child = child->next;

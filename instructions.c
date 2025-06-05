@@ -12,7 +12,7 @@ case opcode: {\
     \
     func(nes, cpu); \
     \
-    if (cpu->pc == cpu->pc_pre)\
+    if (cpu->pc == cpu->pc_pre && !cpu->did_branch)\
         cpu->pc += numbytes - 1;\
     \
     cpu->waiting_cycles += cyclecount;\
@@ -49,8 +49,11 @@ bool is_page_cross(const uint16_t base, const uint16_t addr) {
 }
 
 void branch(struct Nes* nes, struct CPU* cpu, const bool condition, const uint8_t value) {
+    cpu->did_branch = condition;
+
     if (!condition)
         return;
+
 
     cpu->waiting_cycles += 1;
     const int8_t offset = (int8_t)(value);
@@ -280,6 +283,7 @@ inline void ora(struct Nes* nes, struct CPU* cpu){
 }
 
 inline void kil(struct Nes* nes, struct CPU* cpu){
+    cpu->pc = cpu->pc_pre - 1;
     cpu->is_stopped = true;
 }
 
@@ -680,7 +684,6 @@ inline void sed(struct Nes* nes, struct CPU* cpu){
 inline void slo(struct Nes* nes, struct CPU* cpu) {
     asl(nes, cpu);
 
-    fetch_addressed_value(nes, cpu);
     cpu->acc |= cpu->read_tmp;
     set_zero_and_negative(nes, cpu, cpu->acc);
 }
@@ -689,10 +692,8 @@ inline void anc(struct Nes* nes, struct CPU* cpu) {
     fetch_addressed_value(nes, cpu);
 
     cpu->acc &= cpu->read_tmp;
-    set_zero_and_negative(nes, cpu, cpu->read_tmp);
-
-    if (cpu->p.negative)
-        cpu->p.carry = 1;
+    set_zero_and_negative(nes, cpu, cpu->acc);
+    set_higher_carry(nes, cpu, cpu->acc);
 }
 
 inline void rla(struct Nes* nes, struct CPU* cpu) {
@@ -881,7 +882,7 @@ inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, const u
     switch (opcode) {
         INSTRUCTION(0x00, brk, 1, 7, false, Addressing_NoneAddressing)
         INSTRUCTION(0x01, ora, 2, 6, false, Addressing_IndirectX)
-        INSTRUCTION(0x02, kil, 1, 0, false, Addressing_NoneAddressing)
+        INSTRUCTION(0x02, kil, 1, 3, false, Addressing_NoneAddressing)
         INSTRUCTION(0x03, slo, 2, 8, false, Addressing_IndirectX) // SLO
         INSTRUCTION(0x04, nop, 2, 3, false, Addressing_ZeroPage)
         INSTRUCTION(0x05, ora, 2, 3, false, Addressing_ZeroPage)
@@ -897,7 +898,7 @@ inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, const u
         INSTRUCTION(0x0f, slo, 3, 6, false, Addressing_Absolute) // SLO
         INSTRUCTION(0x10, bpl, 2, 2, true, /*(+1 if branch succeeds +2 if to a new page)*/ Addressing_Relative)
         INSTRUCTION(0x11, ora, 2, 5, true, /*+1 if page crossed*/ Addressing_IndirectY)
-        INSTRUCTION(0x12, kil, 1, 0, false, Addressing_NoneAddressing)
+        INSTRUCTION(0x12, kil, 1, 3, false, Addressing_NoneAddressing)
         INSTRUCTION(0x13, slo, 2, 8, false, Addressing_IndirectY) // SLO
         INSTRUCTION(0x14, nop, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0x15, ora, 2, 4, false, Addressing_ZeroPageX)
@@ -913,7 +914,7 @@ inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, const u
         INSTRUCTION(0x1f, slo, 3, 7, false, Addressing_AbsoluteX) // SLO
         INSTRUCTION(0x20, jsr, 3, 6, false, Addressing_Absolute)
         INSTRUCTION(0x21, and, 2, 6, false, Addressing_IndirectX)
-        INSTRUCTION(0x22, kil, 1, 0, false, Addressing_NoneAddressing)
+        INSTRUCTION(0x22, kil, 1, 3, false, Addressing_NoneAddressing)
         INSTRUCTION(0x23, rla, 2, 8, false, Addressing_IndirectX) // RLA
         INSTRUCTION(0x24, bit, 2, 3, false, Addressing_ZeroPage)
         INSTRUCTION(0x25, and, 2, 3, false, Addressing_ZeroPage)
@@ -929,7 +930,7 @@ inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, const u
         INSTRUCTION(0x2f, rla, 3, 6, false, Addressing_Absolute) // RLA
         INSTRUCTION(0x30, bmi, 2, 2, true, /*(+1 if branch succeeds +2 if to a new page)*/ Addressing_Relative)
         INSTRUCTION(0x31, and, 2, 5, true, /*+1 if page crossed*/ Addressing_IndirectY)
-        INSTRUCTION(0x32, kil, 1, 0, false, Addressing_NoneAddressing)
+        INSTRUCTION(0x32, kil, 1, 3, false, Addressing_NoneAddressing)
         INSTRUCTION(0x33, rla, 2, 8, false, Addressing_IndirectY) // RLA
         INSTRUCTION(0x34, nop, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0x35, and, 2, 4, false, Addressing_ZeroPageX)
@@ -945,7 +946,7 @@ inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, const u
         INSTRUCTION(0x3f, rla, 3, 7, false, Addressing_AbsoluteX) // RLA
         INSTRUCTION(0x40, rti, 1, 6, false, Addressing_NoneAddressing)
         INSTRUCTION(0x41, eor, 2, 6, false, Addressing_IndirectX)
-        INSTRUCTION(0x42, kil, 1, 0, false, Addressing_NoneAddressing)
+        INSTRUCTION(0x42, kil, 1, 3, false, Addressing_NoneAddressing)
         INSTRUCTION(0x43, sre, 2, 8, false, Addressing_IndirectX) // SRE
         INSTRUCTION(0x44, nop, 2, 3, false, Addressing_ZeroPage)
         INSTRUCTION(0x45, eor, 2, 3, false, Addressing_ZeroPage)
@@ -961,7 +962,7 @@ inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, const u
         INSTRUCTION(0x4f, sre, 3, 6, false, Addressing_Absolute) // SRE
         INSTRUCTION(0x50, bvc, 2, 2, true, /*(+1 if branch succeeds +2 if to a new page)*/ Addressing_Relative)
         INSTRUCTION(0x51, eor, 2, 5, true, /*+1 if page crossed*/ Addressing_IndirectY)
-        INSTRUCTION(0x52, kil, 1, 0, false, Addressing_NoneAddressing)
+        INSTRUCTION(0x52, kil, 1, 3, false, Addressing_NoneAddressing)
         INSTRUCTION(0x53, sre, 2, 8, false, Addressing_IndirectY) // SRE
         INSTRUCTION(0x54, nop, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0x55, eor, 2, 4, false, Addressing_ZeroPageX)
@@ -977,7 +978,7 @@ inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, const u
         INSTRUCTION(0x5f, sre, 3, 7, false, Addressing_AbsoluteX) // SRE
         INSTRUCTION(0x60, rts, 1, 6, false, Addressing_NoneAddressing)
         INSTRUCTION(0x61, adc, 2, 6, false, Addressing_IndirectX)
-        INSTRUCTION(0x62, kil, 1, 0, false, Addressing_NoneAddressing)
+        INSTRUCTION(0x62, kil, 1, 3, false, Addressing_NoneAddressing)
         INSTRUCTION(0x63, rra, 2, 8, false, Addressing_IndirectX) // RRA
         INSTRUCTION(0x64, nop, 2, 3, false, Addressing_ZeroPage)
         INSTRUCTION(0x65, adc, 2, 3, false, Addressing_ZeroPage)
@@ -993,7 +994,7 @@ inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, const u
         INSTRUCTION(0x6f, rra, 3, 6, false, Addressing_Absolute) // RRA
         INSTRUCTION(0x70, bvs, 2, 2, true, /*(+1 if branch succeeds +2 if to a new page)*/ Addressing_Relative)
         INSTRUCTION(0x71, adc, 2, 5, true, /*+1 if page crossed*/ Addressing_IndirectY)
-        INSTRUCTION(0x72, kil, 1, 0, false, Addressing_NoneAddressing)
+        INSTRUCTION(0x72, kil, 1, 3, false, Addressing_NoneAddressing)
         INSTRUCTION(0x73, rra, 2, 8, false, Addressing_IndirectY) // RRA
         INSTRUCTION(0x74, nop, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0x75, adc, 2, 4, false, Addressing_ZeroPageX)
@@ -1025,7 +1026,7 @@ inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, const u
         INSTRUCTION(0x8f, sax, 3, 4, false, Addressing_Absolute) // SAX
         INSTRUCTION(0x90, bcc, 2, 2, true, /*(+1 if branch succeeds +2 if to a new page)*/ Addressing_Relative)
         INSTRUCTION(0x91, sta, 2, 6, false, Addressing_IndirectY)
-        INSTRUCTION(0x92, kil, 1, 0, false, Addressing_NoneAddressing)
+        INSTRUCTION(0x92, kil, 1, 3, false, Addressing_NoneAddressing)
         INSTRUCTION(0x93, axa, 2, 6, false, Addressing_IndirectY) // AXA
         INSTRUCTION(0x94, sty, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0x95, sta, 2, 4, false, Addressing_ZeroPageX)
@@ -1057,7 +1058,7 @@ inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, const u
         INSTRUCTION(0xaf, lax, 3, 4, false, Addressing_Absolute) // LAX
         INSTRUCTION(0xb0, bcs, 2, 2, true, /*(+1 if branch succeeds +2 if to a new page)*/ Addressing_Relative)
         INSTRUCTION(0xb1, lda, 2, 5, true, /*+1 if page crossed*/ Addressing_IndirectY)
-        INSTRUCTION(0xb2, kil, 1, 0, false, Addressing_NoneAddressing)
+        INSTRUCTION(0xb2, kil, 1, 3, false, Addressing_NoneAddressing)
         INSTRUCTION(0xb3, lax, 2, 5, false, Addressing_IndirectY) // LAX
         INSTRUCTION(0xb4, ldy, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0xb5, lda, 2, 4, false, Addressing_ZeroPageX)
@@ -1089,7 +1090,7 @@ inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, const u
         INSTRUCTION(0xcf, dcp, 3, 6, false, Addressing_Absolute) // DCP
         INSTRUCTION(0xd0, bne, 2, 2, true, /*(+1 if branch succeeds +2 if to a new page)*/ Addressing_Relative)
         INSTRUCTION(0xd1, cmp, 2, 5, true, /*+1 if page crossed*/ Addressing_IndirectY)
-        INSTRUCTION(0xd2, kil, 1, 0, false, Addressing_NoneAddressing)
+        INSTRUCTION(0xd2, kil, 1, 3, false, Addressing_NoneAddressing)
         INSTRUCTION(0xd3, dcp, 2, 8, false, Addressing_IndirectY) // DCP
         INSTRUCTION(0xd4, nop, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0xd5, cmp, 2, 4, false, Addressing_ZeroPageX)
@@ -1121,7 +1122,7 @@ inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, const u
         INSTRUCTION(0xef, isb, 3, 6, false, Addressing_Absolute) // ISB
         INSTRUCTION(0xf0, beq, 2, 2, true, /*(+1 if branch succeeds +2 if to a new page)*/ Addressing_Relative)
         INSTRUCTION(0xf1, sbc, 2, 5, true, /*+1 if page crossed*/ Addressing_IndirectY)
-        INSTRUCTION(0xf2, kil, 1, 0, false, Addressing_NoneAddressing)
+        INSTRUCTION(0xf2, kil, 1, 3, false, Addressing_NoneAddressing)
         INSTRUCTION(0xf3, isb, 2, 8, false, Addressing_IndirectY) // ISB
         INSTRUCTION(0xf4, nop, 2, 4, false, Addressing_ZeroPageX)
         INSTRUCTION(0xf5, sbc, 2, 4, false, Addressing_ZeroPageX)

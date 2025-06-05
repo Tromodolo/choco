@@ -29,6 +29,7 @@ struct CPU* nes_cpu_init(struct Nes* nes) {
     cpu->read_tmp = 0;
     cpu->can_page_cross = false;
     cpu->current_addressing_mode = Addressing_NoneAddressing;
+    cpu->did_branch = false;
 
     // if(getenv("NESTEST")) {
          // cpu->pc = 0xC000;

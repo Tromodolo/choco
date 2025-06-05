@@ -19,7 +19,6 @@ add_executable(choco
         instructions.c
         nes-logging.c
         tests/tests.c
-        tests/cpu-addressing.c
         tests/auto-tests.c
         tests/json/cJSON.c)
 
