@@ -3,6 +3,8 @@
 
 #include "ppu.h"
 
+#include <stdio.h>
+
 #include "cartridge.h"
 #include "palette.h"
 
@@ -48,9 +50,11 @@ struct PPU* ppu_init(const struct Nes* nes) {
     ppu->read_buffer = 0;
     ppu->is_in_nmi = 0;
 
-    ppu->dots_drawn = 0;
+    ppu->dots_drawn = 20; // console starts with a RESET-interrupt which takes 7 cycles, so 7 * 3
     ppu->current_scanline = 0;
     ppu->total_cycles = 0;
+    ppu->is_even_frame = false;
+    ppu->total_frame_cycles = 0;
 
     ppu->loopy_temp.value = 0;
     ppu->loopy_value.value = 0;
@@ -78,6 +82,7 @@ struct PPU* ppu_init(const struct Nes* nes) {
     ppu->control_register.value = 0;
     ppu->mask_register.value = 0;
     ppu->status_register.value = 0;
+    ppu->status_register.vblank = 1;
 
     return ppu;
 }
@@ -195,22 +200,24 @@ inline void update_shifters(struct PPU* ppu) {
 }
 
 bool ppu_tick(struct Nes* nes, struct PPU* ppu, Color* frame_buffer, bool* is_new_frame) {
-    if (ppu->current_scanline == 0 && ppu->dots_drawn == 0) {
-        ppu->dots_drawn = 1;
-    }
-
-    if (ppu->current_scanline == -1 && ppu->dots_drawn == 1) {
-        ppu->status_register.vblank = false;
-        ppu->status_register.sprite_zero_hit = false;
-        ppu->status_register.sprite_overflow = false;
-
-        for (int j = 0; j < MAX_SPRITE_COUNT; j++) {
-            ppu->sprite_shifter_pattern_lo[j] = 0;
-            ppu->sprite_shifter_pattern_hi[j] = 0;
-        }
-    }
-
     if (ppu->current_scanline >= -1 && ppu->current_scanline < 240) {
+        if (ppu->is_even_frame &&
+            (ppu->mask_register.background_render_enable || ppu->mask_register.sprite_render_enable) &&
+            ppu->current_scanline == 0 && ppu->dots_drawn == 0) {
+            ppu->dots_drawn = 1;
+        }
+
+        if (ppu->current_scanline == -1 && ppu->dots_drawn == 1) {
+            ppu->status_register.vblank = 0;
+            ppu->status_register.sprite_zero_hit = 0;
+            ppu->status_register.sprite_overflow = 0;
+
+            for (int j = 0; j < MAX_SPRITE_COUNT; j++) {
+                ppu->sprite_shifter_pattern_lo[j] = 0;
+                ppu->sprite_shifter_pattern_hi[j] = 0;
+            }
+        }
+
         if ((ppu->dots_drawn >= 2 && ppu->dots_drawn < 258) ||
             (ppu->dots_drawn >= 321 && ppu->dots_drawn < 338)) {
             update_shifters(ppu);
@@ -250,10 +257,11 @@ bool ppu_tick(struct Nes* nes, struct PPU* ppu, Color* frame_buffer, bool* is_ne
     }
 
     if (ppu->current_scanline == 241 && ppu->dots_drawn == 1) {
+        *is_new_frame = true;
         ppu->status_register.vblank = 1;
+
         if (ppu->control_register.nmi_enable) {
             ppu->is_in_nmi = true;
-            *is_new_frame = true;
         }
     }
 
@@ -261,6 +269,7 @@ bool ppu_tick(struct Nes* nes, struct PPU* ppu, Color* frame_buffer, bool* is_ne
 
     ppu->dots_drawn++;
     ppu->total_cycles++;
+    ppu->total_frame_cycles++;
 
     if (ppu->current_scanline < 240 && ppu->dots_drawn == 260) {
         if (ppu->mask_register.background_render_enable || ppu->mask_register.sprite_render_enable) {
@@ -271,12 +280,17 @@ bool ppu_tick(struct Nes* nes, struct PPU* ppu, Color* frame_buffer, bool* is_ne
     if (ppu->dots_drawn >= 341) {
         ppu->dots_drawn = 0;
         ppu->current_scanline++;
-    }
 
-    if (ppu->current_scanline >= 261) {
-        ppu->current_scanline = -1;
-        ppu->status_register.vblank = 0;
-        ppu->is_in_nmi = false;
+        if (ppu->current_scanline >= 261) {
+            //printf("frame had %lu ticks\n", ppu->total_frame_cycles);
+
+            ppu->is_even_frame = !ppu->is_even_frame;
+            ppu->total_frame_cycles = 0;
+
+            ppu->current_scanline = -1;
+            ppu->status_register.vblank = 0;
+            ppu->is_in_nmi = false;
+        }
     }
 
     return is_new_frame;

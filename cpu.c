@@ -42,7 +42,7 @@ void nes_cpu_tick(struct Nes* nes) {
     if (!nes->cpu->is_stopped && nes->cpu->waiting_cycles == 0) {
 #ifndef TESTS
         // if (nes->cpu->total_cycles <= 26554)
-             write_current_status_log(nes);
+             // write_current_status_log(nes);
 #endif
 
         if (nes->cpu->pc == 0xF503) {

@@ -80,6 +80,8 @@ struct PPU {
     int dots_drawn;
     int current_scanline;
     uint64_t total_cycles;
+    uint64_t total_frame_cycles;
+    bool is_even_frame;
 
     Loopy loopy_temp;
     Loopy loopy_value;

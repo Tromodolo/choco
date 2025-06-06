@@ -246,13 +246,24 @@ void stack_push(struct Nes* nes, struct CPU* cpu, const uint8_t val) {
 }
 
 void handle_cpu_interrupt(struct Nes* nes, struct CPU* cpu, const enum Interrupt type) {
-    const uint16_t new_pc = cpu->pc + 1;
+    uint16_t new_pc = cpu->pc - 1;
+
+    // Some differing behaviour in how nmi/brk works
+    // brk will do an interrupt and then return to the instruction after the interrupt
+    // nmi stops an instruction from running, and therefore needs to return to that same instruction
+    if (type == Interrupt_BRK)
+        new_pc = cpu->pc + 1;
+
     stack_push(nes, cpu, (new_pc & 0xFF00) >> 8);
     stack_push(nes, cpu, new_pc & 0xFF);
 
     Flags status = cpu->p;
     status.break1 = 1;
     status.break2 = 1;
+
+    if (type != Interrupt_BRK)
+        status.break1 = 0;
+
     stack_push(nes, cpu, status.value);
     cpu->p.interrupt_disable = 1;
 
