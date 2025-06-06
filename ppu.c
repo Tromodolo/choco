@@ -429,7 +429,7 @@ inline void load_bg_patterns(const struct Nes* nes, struct PPU* ppu) {
                 ppu->loopy_value.nametable_y << 11 |
                 ppu->loopy_value.nametable_x << 10 |
                 (ppu->loopy_value.coarse_y >> 2) << 3 |
-                ppu->loopy_value.coarse_x);
+                ppu->loopy_value.coarse_x >> 2);
 
             ppu->bg_next_tile_attribute = ppu->vram[attributeAddr];
 
