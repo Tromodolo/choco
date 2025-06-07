@@ -15,8 +15,8 @@ enum Mapper {
 };
 
 enum Mirroring {
-    Mirroring_Vertical = 0,
-    Mirroring_Horizontal = 1,
+    Mirroring_Horizontal = 0,
+    Mirroring_Vertical = 1,
     Mirroring_FourScreen = 2,
     // Mirroring_OneScreenLower = 3,
     // Mirroring_OneScreenUpper = 4

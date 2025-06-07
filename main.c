@@ -33,7 +33,7 @@ int main(void) {
     SetAudioStreamBufferSizeDefault(1024);
     const AudioStream stream = LoadAudioStream(41000, 16, 1);
 
-    core = get_core_for_file("/media/games/dk.nes");
+    core = get_core_for_file("/media/games/smb.nes");
 
     SetAudioStreamCallback(stream, get_samples);
     PlayAudioStream(stream);

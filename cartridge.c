@@ -79,7 +79,7 @@ struct Cartridge* nes_cartridge_load_from_buffer(const uint8_t* buffer, const lo
     if (!chr_rom_size)
         chr_rom_size = INES_CHR_ROM_BANK_SIZE;
 
-    enum Mirroring mirroring = (enum Mirroring)buffer[INES_CONTROL_1] & 0b1;
+    enum Mirroring mirroring = (enum Mirroring)(buffer[INES_CONTROL_1] & 0b1);
     const bool battery_backed = buffer[INES_CONTROL_1] & 0b10;
     const bool skip_trainer = buffer[INES_CONTROL_1] & 0b100;
 

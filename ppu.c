@@ -146,11 +146,11 @@ uint8_t internal_read(const struct Nes* nes, struct PPU* ppu, const uint16_t add
         ppu->read_buffer = ppu->vram[mirror_vram_addr(nes, addr)];
         return value;
     }
-    if (addr <= 0X3FFF) {
-        // 0x3F00-0x3F1F contain palette data
-        // 0x3F20-0x3FFF is mirrored data
-        const uint8_t mirrored_addr = addr & 0x1F;
-        return ppu->palette[mirrored_addr];
+    if (addr == 0x3f10 || addr == 0x3f14 || addr == 0x3f18 || addr == 0x3f1c) {
+        return ppu->palette[addr & 0x0F];
+    }
+    if (addr <= 0x3fff) {
+        return ppu->palette[addr & 0xFF];
     }
 
     assert(false);
@@ -165,11 +165,12 @@ void internal_write(const struct Nes* nes, const struct PPU* ppu, const uint16_t
         ppu->vram[mirror_vram_addr(nes, addr)] = val;
         return;
     }
-    if (addr <= 0X3FFF) {
-        // 0x3F00-0x3F1F contain palette data
-        // 0x3F20-0x3FFF is mirrored data
-        const uint8_t mirrored_addr = addr & 0x1F;
-        ppu->palette[mirrored_addr] = val;
+    if (addr == 0x3f10 || addr == 0x3f14 || addr == 0x3f18 || addr == 0x3f1c) {
+        ppu->palette[addr & 0x0F] = val;
+        return;
+    }
+    if (addr <= 0x3fff) {
+        ppu->palette[addr & 0x1F] = val;
         return;
     }
 
