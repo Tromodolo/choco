@@ -73,10 +73,10 @@ inline bool nes_tick_until_sample(struct Nes* nes, Color* frame_buffer, bool* is
 
     if (nes->clocks_since_last_sample >= CLOCKS_PER_SAMPLE) {
         nes->audio_sample_out = 0; // TODO: set to APU value
-        nes->clocks_since_last_sample %= CLOCKS_PER_SAMPLE;
+        nes->clocks_since_last_sample -= CLOCKS_PER_SAMPLE;
         nes->has_new_sample = true;
     }
-    nes->clocks_since_last_sample++;
+    nes->clocks_since_last_sample += 1.0f;
 
     return nes->has_new_sample;
 }

@@ -32,11 +32,11 @@ struct Nes {
 
     bool has_new_sample;
     uint16_t audio_sample_out;
-    uint16_t clocks_since_last_sample;
+    float clocks_since_last_sample;
 };
 
-constexpr int CPU_CLOCKS_PER_SECOND = 1789773;
-constexpr int CLOCKS_PER_SAMPLE = CPU_CLOCKS_PER_SECOND / AUDIO_SAMPLE_RATE;
+constexpr float CPU_CLOCKS_PER_SECOND = 1789772.67f;
+constexpr float CLOCKS_PER_SAMPLE = CPU_CLOCKS_PER_SECOND / AUDIO_SAMPLE_RATE;
 
 struct Nes* nes_init(const char* file_path);
 struct Nes* nes_init_from_buffer(const uint8_t* buffer, const long size);
