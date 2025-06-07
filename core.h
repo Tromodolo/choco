@@ -12,7 +12,7 @@ struct Core {
 };
 
 struct Core* get_core_for_file(const char* file_path);
-void core_audio_callback(struct Core* core, void *buffer_data, unsigned int frames);
+void core_audio_callback(struct Core* core, short* samples, unsigned int sample_count);
 void core_clear_frame_buffer_changed(struct Core* core);
 void core_free(struct Core* core);
 void core_read_inputs(const struct Core* core);

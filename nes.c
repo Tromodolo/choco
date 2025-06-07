@@ -8,6 +8,7 @@
 #include "cartridge.h"
 #include "cpu.h"
 #include "ppu.h"
+#include "apu.h"
 
 uint8_t read_hw_register(struct Nes* nes, uint16_t addr, bool* is_hw_register);
 void write_hw_register(struct Nes* nes, uint16_t addr, const uint8_t val, bool* is_hw_register);
@@ -18,10 +19,15 @@ struct Nes* nes_init(const char* file_path) {
     nes->cartridge = nes_cartridge_load_from_file(file_path);
     nes->cpu =  nes_cpu_init(nes);
     nes->ppu = ppu_init(nes);
+    nes->apu = apu_init(nes);
 
     nes->player_1_input.value = 0;
 
     nes->global_cycle_count = 0;
+
+    nes->has_new_sample = false;
+    nes->audio_sample_out = 0;
+    nes->clocks_since_last_sample = 0;
 
     return nes;
 }
@@ -36,32 +42,47 @@ struct Nes* nes_init_from_buffer(const uint8_t* buffer, const long size) {
     return nes;
 }
 
-inline void nes_get_samples(void* buffer_data, unsigned int frames, struct Nes* nes, Color* frame_buffer, bool* is_new_frame){
+inline bool nes_tick_until_sample(struct Nes* nes, Color* frame_buffer, bool* is_new_frame){
+    nes->global_cycle_count++;
+
     ppu_tick(nes, nes->ppu, frame_buffer, is_new_frame);
 
-    if (nes->global_cycle_count % 3 == 0) {
-        nes_cpu_tick(nes);
+    nes->has_new_sample = false;
+    if (nes->global_cycle_count % 3 != 0)
+        return nes->has_new_sample;
 
-        nes->cpu->dma_read_write_latch = !nes->cpu->dma_read_write_latch;
-        if (nes->cpu->is_dma_active) {
-            nes->cpu->ready = false;
+    nes_cpu_tick(nes);
 
-            if (nes->cpu->dma_read_write_latch) { // Read
-                nes->cpu->dma_value = nes_read_char(nes, nes->cpu->dma_page << 8 | nes->cpu->dma_addr);
-            } else if (!nes->cpu->dma_just_started) { // Write
-                nes->ppu->oam[nes->cpu->dma_addr] = nes->cpu->dma_value;
-                nes->cpu->dma_addr++;
+    nes->cpu->dma_read_write_latch = !nes->cpu->dma_read_write_latch;
+    if (nes->cpu->is_dma_active) {
+        nes->cpu->ready = false;
 
-                // After wrapping around
-                nes->cpu->is_dma_active = nes->cpu->dma_addr != 0;
-                nes->cpu->ready = !nes->cpu->is_dma_active;
-            }
+        if (nes->cpu->dma_read_write_latch) { // Read
+            nes->cpu->dma_value = nes_read_char(nes, nes->cpu->dma_page << 8 | nes->cpu->dma_addr);
+        } else if (!nes->cpu->dma_just_started) { // Write
+            nes->ppu->oam[nes->cpu->dma_addr] = nes->cpu->dma_value;
+            nes->cpu->dma_addr++;
 
-            nes->cpu->dma_just_started = false;
+            // After wrapping around
+            nes->cpu->is_dma_active = nes->cpu->dma_addr != 0;
+            nes->cpu->ready = !nes->cpu->is_dma_active;
         }
+
+        nes->cpu->dma_just_started = false;
     }
 
-    nes->global_cycle_count++;
+    if (nes->clocks_since_last_sample >= CLOCKS_PER_SAMPLE) {
+        nes->audio_sample_out = 0; // TODO: set to APU value
+        nes->clocks_since_last_sample %= CLOCKS_PER_SAMPLE;
+        nes->has_new_sample = true;
+    }
+    nes->clocks_since_last_sample++;
+
+    return nes->has_new_sample;
+}
+
+inline uint16_t nes_get_sample(struct Nes* nes) {
+    return nes->audio_sample_out;
 }
 
 void nes_free(struct Nes* nes) {

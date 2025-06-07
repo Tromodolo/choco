@@ -2,6 +2,7 @@
 #include <raylib.h>
 #include <stdlib.h>
 
+#include "main.h"
 #include "core.h"
 #include "tests/tests.h"
 
@@ -11,13 +12,13 @@ constexpr int SCREEN_HEIGHT = 600;
 struct Core* core;
 int framecount = 0;
 
-void get_samples(void *bufferData, const unsigned int frames){
-    short* samples = bufferData;
-    for(int i = 0; i < frames; i++) {
+void get_samples(void* buffer, const unsigned int sample_count){
+    short* samples = buffer;
+    for(int i = 0; i < sample_count; i++) {
         samples[i] = 0;
     }
 
-    core_audio_callback(core, bufferData, frames);
+    core_audio_callback(core, samples, sample_count);
 }
 
 int main(void) {
@@ -31,7 +32,7 @@ int main(void) {
 
     InitAudioDevice();
     SetAudioStreamBufferSizeDefault(1024);
-    const AudioStream stream = LoadAudioStream(41000, 16, 1);
+    const AudioStream stream = LoadAudioStream(AUDIO_SAMPLE_RATE, 16, 1);
 
     core = get_core_for_file("/media/games/smb.nes");
 

@@ -16,6 +16,7 @@ add_executable(choco
         cartridge.c
         cpu.c
         ppu.c
+        apu.c
         instructions.c
         nes-logging.c
         tests/tests.c

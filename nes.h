@@ -3,6 +3,8 @@
 #include <raylib.h>
 #include <stdint.h>
 
+#include "main.h"
+
 typedef union {
     struct {
         uint8_t a : 1;
@@ -21,17 +23,25 @@ struct Nes {
     struct Cartridge* cartridge;
     struct CPU* cpu;
     struct PPU* ppu;
+    struct APU* apu;
 
     uint64_t global_cycle_count;
 
     PlayerInput player_1_input;
-
     uint8_t current_reading_button_value;
+
+    bool has_new_sample;
+    uint16_t audio_sample_out;
+    uint16_t clocks_since_last_sample;
 };
+
+constexpr int CPU_CLOCKS_PER_SECOND = 1789773;
+constexpr int CLOCKS_PER_SAMPLE = CPU_CLOCKS_PER_SECOND / AUDIO_SAMPLE_RATE;
 
 struct Nes* nes_init(const char* file_path);
 struct Nes* nes_init_from_buffer(const uint8_t* buffer, const long size);
-void nes_get_samples(void* buffer_data, unsigned int frames, struct Nes* nes, Color* frame_buffer, bool* is_new_frame);
+bool nes_tick_until_sample(struct Nes* nes, Color* frame_buffer, bool* is_new_frame);
+uint16_t nes_get_sample(struct Nes* nes);
 void nes_free(struct Nes* nes);
 
 void nes_read_inputs(struct Nes* nes);
