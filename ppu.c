@@ -494,11 +494,11 @@ inline void evaluate_sprites_on_line(struct PPU* ppu) {
             entry->attribute = attribute;
             entry->tile_id = tile_index;
 
-            if (tile_index) {
-                entry->sprite_zero = false;
-            } else {
+            if (sprite_index == 0) {
                 entry->sprite_zero = true;
                 ppu->sprite_zero_possible = true;
+            } else {
+                entry->sprite_zero = false;
             }
 
             ppu->sprite_count++;
