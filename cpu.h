@@ -51,8 +51,16 @@ struct CPU {
     uint64_t total_cycles;
 
     bool is_stopped;
+    bool ready;
 
     Flags p;
+
+    bool dma_read_write_latch;
+    bool is_dma_active;
+    bool dma_just_started;
+    uint8_t dma_page;
+    uint8_t dma_addr;
+    uint8_t dma_value;
 };
 
 struct CPU* nes_cpu_init(struct Nes* nes);

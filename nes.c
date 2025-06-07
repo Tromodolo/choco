@@ -39,8 +39,27 @@ struct Nes* nes_init_from_buffer(const uint8_t* buffer, const long size) {
 inline void nes_get_samples(void* buffer_data, unsigned int frames, struct Nes* nes, Color* frame_buffer, bool* is_new_frame){
     ppu_tick(nes, nes->ppu, frame_buffer, is_new_frame);
 
-    if (nes->global_cycle_count % 3 == 0)
+    if (nes->global_cycle_count % 3 == 0) {
         nes_cpu_tick(nes);
+
+        nes->cpu->dma_read_write_latch = !nes->cpu->dma_read_write_latch;
+        if (nes->cpu->is_dma_active) {
+            nes->cpu->ready = false;
+
+            if (nes->cpu->dma_read_write_latch) { // Read
+                nes->cpu->dma_value = nes_read_char(nes, nes->cpu->dma_page << 8 | nes->cpu->dma_addr);
+            } else if (!nes->cpu->dma_just_started) { // Write
+                nes->ppu->oam[nes->cpu->dma_addr] = nes->cpu->dma_value;
+                nes->cpu->dma_addr++;
+
+                // After wrapping around
+                nes->cpu->is_dma_active = nes->cpu->dma_addr != 0;
+                nes->cpu->ready = !nes->cpu->is_dma_active;
+            }
+
+            nes->cpu->dma_just_started = false;
+        }
+    }
 
     nes->global_cycle_count++;
 }
@@ -124,7 +143,7 @@ inline uint8_t read_hw_register(struct Nes* nes, uint16_t addr, bool* is_hw_regi
             return ppu_get_oam_data(nes, nes->ppu);
         case 0x2007: // DATA
             *is_hw_register = true;
-            return ppu_get_data(nes, nes->ppu);;
+            return ppu_get_data(nes, nes->ppu);
         case 0x4016: // GAMEPAD 1
             *is_hw_register = true;
             const uint8_t value = nes->current_reading_button_value & 1;
@@ -135,7 +154,7 @@ inline uint8_t read_hw_register(struct Nes* nes, uint16_t addr, bool* is_hw_regi
         case 0x2005: // SCROLL
         case 0x2006: // ADDR
         case 0x4017: // GAMEPAD 2
-        case 0x4014: // DMA
+        case 0x4014: // DMA, doesn't exist in read
         case 0x4000: // APU
         case 0x4001: // APU
         case 0x4002: // APU
@@ -198,6 +217,13 @@ inline void write_hw_register(struct Nes* nes, uint16_t addr, const uint8_t val,
             *is_hw_register = true;
             ppu_write_data(nes, nes->ppu, val);
             break;
+        case 0x4014: // DMA
+            *is_hw_register = true;
+            nes->cpu->is_dma_active = true;
+            nes->cpu->dma_just_started = true;
+            nes->cpu->dma_page = val;
+            nes->cpu->dma_addr = 0;
+            return;
         case 0x4016: // GAMEPAD 1
             *is_hw_register = true;
             if ((val & 1) == 1) {
@@ -219,9 +245,6 @@ inline void write_hw_register(struct Nes* nes, uint16_t addr, const uint8_t val,
         case 0x4013: // APU
         case 0x4015: // APU
         case 0x4017: // GAMEPAD 2
-        case 0x4014: // DMA
-            *is_hw_register = true;
-            return;
         default:
             *is_hw_register = false;
             break;

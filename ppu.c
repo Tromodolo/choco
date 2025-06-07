@@ -500,6 +500,8 @@ inline void evaluate_sprites_on_line(struct PPU* ppu) {
                 entry->sprite_zero = true;
                 ppu->sprite_zero_possible = true;
             }
+
+            ppu->sprite_count++;
         }
     }
 }

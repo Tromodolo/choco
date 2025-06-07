@@ -23,13 +23,22 @@ struct CPU* nes_cpu_init(struct Nes* nes) {
 
     cpu->total_cycles = 7;
     cpu->waiting_cycles = 0;
+
     cpu->is_stopped = false;
+    cpu->ready = true;
 
     cpu->current_instruction = 0;
     cpu->read_tmp = 0;
     cpu->can_page_cross = false;
     cpu->current_addressing_mode = Addressing_NoneAddressing;
     cpu->did_branch = false;
+
+    cpu->dma_read_write_latch = true;
+    cpu->is_dma_active = false;
+    cpu->dma_just_started = false;
+    cpu->dma_page = 0;
+    cpu->dma_addr = 0;
+    cpu->dma_value = 0;
 
     // if(getenv("NESTEST")) {
          // cpu->pc = 0xC000;
@@ -49,6 +58,9 @@ void nes_cpu_tick(struct Nes* nes) {
             int x = 5;
             x++;
         }
+
+        if (!nes->cpu->ready)
+            return;
 
         const uint8_t opcode = nes_read_char(nes, nes->cpu->pc++);
         nes_cpu_handle_instruction(nes, nes->cpu, opcode);
