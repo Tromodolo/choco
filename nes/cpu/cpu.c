@@ -3,9 +3,9 @@
 
 #include "cpu.h"
 
-#include "nes.h"
+#include "../nes.h"
 #include "instructions.h"
-#include "nes-logging.h"
+#include "../nes-logging.h"
 
 struct CPU* nes_cpu_init(struct Nes* nes) {
     struct CPU* cpu = malloc(sizeof(struct CPU));

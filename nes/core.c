@@ -2,7 +2,7 @@
 
 #include "core.h"
 #include "nes.h"
-#include "ppu.h"
+#include "ppu/ppu.h"
 
 inline struct Core* get_core_for_file(const char* file_path) {
     struct Core* core = malloc(sizeof(struct Core));
@@ -22,13 +22,13 @@ inline struct Core* get_core_for_file(const char* file_path) {
 
 void core_audio_callback(struct Core* core, short* samples, const unsigned int sample_count) {
     bool is_new_frame = false;
-    int collected_samples = 0;
-    while (collected_samples < sample_count) {
+    int available_samples = 0;
+    while (available_samples < sample_count) {
         is_new_frame = false;
 
         if (nes_tick_until_sample(core->emu, core->frame_buffer, &is_new_frame)) {
-            samples[collected_samples] = nes_get_sample(core->emu);
-            collected_samples++;
+            samples[available_samples] = nes_get_sample(core->emu);
+            available_samples++;
         }
 
         if (is_new_frame) {

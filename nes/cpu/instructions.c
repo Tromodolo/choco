@@ -1,7 +1,7 @@
 #include "instructions.h"
 #include "instructions-internal.h"
 #include "cpu.h"
-#include "nes.h"
+#include "../nes.h"
 
 #define INSTRUCTION(opcode, func, numbytes, cyclecount, canpagecross, addressing) \
 case opcode: {\

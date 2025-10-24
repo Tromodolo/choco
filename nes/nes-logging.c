@@ -1,11 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "cpu.h"
+#include "cpu/cpu.h"
 #include "nes.h"
 #include "nes-logging.h"
-#include "instructions-internal.h"
-#include "ppu.h"
+#include "ppu/ppu.h"
 
 struct Instruction {
     const char* name;

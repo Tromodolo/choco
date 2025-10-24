@@ -5,7 +5,7 @@
 
 #include <stdio.h>
 
-#include "cartridge.h"
+#include "../cartridge.h"
 #include "palette.h"
 
 constexpr int OAM_SIZE = 0xFF;

@@ -3,7 +3,7 @@
 #include <raylib.h>
 #include <stdint.h>
 
-#include "main.h"
+#include "../main.h"
 
 typedef union {
     struct {
@@ -31,7 +31,7 @@ struct Nes {
     uint8_t current_reading_button_value;
 
     bool has_new_sample;
-    uint16_t audio_sample_out;
+    short audio_sample_out;
     float clocks_since_last_sample;
 };
 
@@ -41,7 +41,7 @@ constexpr float CLOCKS_PER_SAMPLE = CPU_CLOCKS_PER_SECOND / AUDIO_SAMPLE_RATE;
 struct Nes* nes_init(const char* file_path);
 struct Nes* nes_init_from_buffer(const uint8_t* buffer, const long size);
 bool nes_tick_until_sample(struct Nes* nes, Color* frame_buffer, bool* is_new_frame);
-uint16_t nes_get_sample(struct Nes* nes);
+short nes_get_sample(struct Nes* nes);
 void nes_free(struct Nes* nes);
 
 void nes_read_inputs(struct Nes* nes);

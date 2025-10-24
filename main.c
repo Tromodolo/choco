@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #include "main.h"
-#include "core.h"
+#include "nes/core.h"
 #include "tests/tests.h"
 
 constexpr int SCREEN_WIDTH = 800;

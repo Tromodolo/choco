@@ -5,10 +5,10 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "../cartridge.h"
-#include "../cpu.h"
+#include "../nes/cartridge.h"
+#include "../nes/cpu/cpu.h"
 #include "json/cJSON.h"
-#include "../nes.h"
+#include "../nes/nes.h"
 
 constexpr int TEST_HEADER_SIZE = 0x10;
 constexpr int PRG_ROM_BANK_END = 0x8000;

@@ -1,6 +1,6 @@
 #ifndef CPU_H
 #define CPU_H
-#include "nes.h"
+#include "../nes.h"
 
 enum AddressingMode {
     Addressing_Immediate,

@@ -6,9 +6,9 @@
 #include <stdio.h>
 
 #include "cartridge.h"
-#include "cpu.h"
-#include "ppu.h"
-#include "apu.h"
+#include "cpu/cpu.h"
+#include "ppu/ppu.h"
+#include "apu/apu.h"
 
 uint8_t read_hw_register(struct Nes* nes, uint16_t addr, bool* is_hw_register);
 void write_hw_register(struct Nes* nes, uint16_t addr, const uint8_t val, bool* is_hw_register);
@@ -52,6 +52,7 @@ inline bool nes_tick_until_sample(struct Nes* nes, Color* frame_buffer, bool* is
         return nes->has_new_sample;
 
     nes_cpu_tick(nes);
+    apu_tick(nes->apu);
 
     nes->cpu->dma_read_write_latch = !nes->cpu->dma_read_write_latch;
     if (nes->cpu->is_dma_active) {
@@ -72,7 +73,7 @@ inline bool nes_tick_until_sample(struct Nes* nes, Color* frame_buffer, bool* is
     }
 
     if (nes->clocks_since_last_sample >= CLOCKS_PER_SAMPLE) {
-        nes->audio_sample_out = 0; // TODO: set to APU value
+        nes->audio_sample_out = apu_read_latest_sample(nes->apu);
         nes->clocks_since_last_sample -= CLOCKS_PER_SAMPLE;
         nes->has_new_sample = true;
     }
@@ -81,7 +82,7 @@ inline bool nes_tick_until_sample(struct Nes* nes, Color* frame_buffer, bool* is
     return nes->has_new_sample;
 }
 
-inline uint16_t nes_get_sample(struct Nes* nes) {
+inline short nes_get_sample(struct Nes* nes) {
     return nes->audio_sample_out;
 }
 
@@ -191,6 +192,7 @@ inline uint8_t read_hw_register(struct Nes* nes, uint16_t addr, bool* is_hw_regi
         case 0x4013: // APU
         case 0x4015: // APU
             *is_hw_register = true;
+            // Read-only
             return 0;
         default:
             *is_hw_register = false;
@@ -265,6 +267,9 @@ inline void write_hw_register(struct Nes* nes, uint16_t addr, const uint8_t val,
         case 0x4012: // APU
         case 0x4013: // APU
         case 0x4015: // APU
+            apu_write(nes->apu, addr, val);
+            *is_hw_register = true;
+            break;
         case 0x4017: // GAMEPAD 2
         default:
             *is_hw_register = false;

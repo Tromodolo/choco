@@ -11,14 +11,14 @@ endif (TESTS)
 
 add_executable(choco
         main.c
-        nes.c
-        core.c
-        cartridge.c
-        cpu.c
-        ppu.c
-        apu.c
-        instructions.c
-        nes-logging.c
+        nes/nes.c
+        nes/core.c
+        nes/cartridge.c
+        nes/cpu/cpu.c
+        nes/ppu/ppu.c
+        nes/apu/apu.c
+        nes/cpu/instructions.c
+        nes/nes-logging.c
         tests/tests.c
         tests/auto-tests.c
         tests/json/cJSON.c)

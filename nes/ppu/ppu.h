@@ -1,6 +1,6 @@
 #ifndef PPU_H
 #define PPU_H
-#include "nes.h"
+#include "../nes.h"
 
 constexpr int SCREEN_OFFSET_TOP = 8;
 constexpr int SCREEN_OFFSET_BOTTOM = 8;
