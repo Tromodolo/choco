@@ -3,3 +3,6 @@
 /cmake-build-tests/
 /.vscode/
 /.idea/
+/.cache/
+*.log
+*.nes
