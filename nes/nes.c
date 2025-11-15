@@ -89,6 +89,7 @@ inline short nes_get_sample(struct Nes* nes) {
 void nes_free(struct Nes* nes) {
     nes_cartridge_free(nes->cartridge);
     nes_cpu_free(nes->cpu);
+    // TODO: add free for all subtypes like ppu and apu
     free(nes);
 }
 

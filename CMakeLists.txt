@@ -21,7 +21,9 @@ add_executable(choco
         nes/nes-logging.c
         tests/tests.c
         tests/auto-tests.c
-        tests/json/cJSON.c)
+        tests/json/cJSON.c
+        nes/apu/pulse.c
+        nes/apu/pulse.h)
 
 target_link_libraries(choco raylib)
 

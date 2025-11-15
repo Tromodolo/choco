@@ -5,6 +5,8 @@
 #ifndef APU_H
 #define APU_H
 
+#include "pulse.h"
+
 typedef union {
     struct {
         uint8_t volume : 4;
@@ -34,20 +36,16 @@ typedef union {
 } SquareRegTimerHi;
 
 struct APU {
-    // Channels
-    // Square 1
-    SquareRegCtrl square_1_ctrl;
-    SquareRegSweep square_1_sweep;
-    uint8_t square_1_period_lo;
-    SquareRegTimerHi square_1_period_hi;
-
-    uint16_t square_1_sample;
+    struct Pulse* pulse1;
 
     // State
+    uint16_t frame_counter;
+    bool do_tick;
     uint16_t last_sample;
 };
 
 struct APU* apu_init(struct Nes* nes);
+void apu_free(struct APU* apu);
 void apu_write(struct APU* apu, uint16_t addr, uint8_t val);
 void apu_tick(struct APU* apu);
 short apu_read_latest_sample(struct APU* apu);
