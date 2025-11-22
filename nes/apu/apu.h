@@ -36,11 +36,13 @@ typedef union {
 } SquareRegTimerHi;
 
 struct APU {
-    struct Pulse* pulse1;
+    struct Pulse* pulse_one;
+    struct Pulse* pulse_two;
 
     // State
     uint16_t frame_counter;
     bool do_tick;
+    bool is_five_step;
     uint16_t last_sample;
 };
 

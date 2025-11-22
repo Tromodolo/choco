@@ -7,23 +7,40 @@
 #include <stdint.h>
 
 struct Pulse {
-    uint8_t duty_cycle;
-    uint8_t halt;
-    uint8_t constant;
-    uint8_t volume;
+    bool enabled;
 
-    uint8_t sweep_enabled;
-    uint8_t sweep_period;
-    uint8_t sweep_negate;
-    uint8_t sweep_shift;
+    uint8_t duty_cycle : 2;
+    uint8_t length_counter_halt : 1;
+    uint8_t constant : 1;
+
+    uint8_t sweep_enabled : 1;
+    uint8_t sweep_period : 3;
+    uint8_t sweep_negate : 1;
+    uint8_t sweep_shift : 3;
+
+    uint8_t timer_lo;
+    uint8_t timer_hi : 3;
+
+    uint8_t envelope_decay_level : 4;
+    uint8_t envelope_divider : 4; // Volume
+    uint8_t envelope_divider_reset : 4; // Volume
+    bool envelope_loop;
+    bool envelope_start;
 
     uint16_t timer;
-    uint8_t length;
+    uint16_t timer_reset;
+    uint8_t length_counter;
 
-    uint8_t sample;
+    uint8_t duty_cycle_idx : 3;
 };
 
 struct Pulse* pulse_init();
 void pulse_free(struct Pulse* pulse);
+
+void pulse_reset_timer(struct Pulse* pulse);
+void pulse_step(struct Pulse* pulse);
+void pulse_step_envelope(struct Pulse* pulse);
+void pulse_step_length(struct Pulse* pulse);
+short pulse_get_sample(const struct Pulse* pulse);
 
 #endif //PULSE_H
