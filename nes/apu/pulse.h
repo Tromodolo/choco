@@ -18,7 +18,7 @@ struct Pulse {
     uint8_t sweep_negate : 1;
     uint8_t sweep_shift : 3;
 
-    uint8_t timer_lo;
+    uint8_t timer_lo : 8;
     uint8_t timer_hi : 3;
 
     uint8_t envelope_decay_level : 4;
@@ -37,7 +37,7 @@ struct Pulse {
 struct Pulse* pulse_init();
 void pulse_free(struct Pulse* pulse);
 
-void pulse_reset_timer(struct Pulse* pulse);
+void pulse_update_timer_reset(struct Pulse* pulse);
 void pulse_step(struct Pulse* pulse);
 void pulse_step_envelope(struct Pulse* pulse);
 void pulse_step_length(struct Pulse* pulse);

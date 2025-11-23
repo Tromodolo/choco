@@ -45,17 +45,17 @@ void pulse_free(struct Pulse* pulse) {
     free(pulse);
 }
 
-void pulse_reset_timer(struct Pulse* pulse) {
-   pulse->timer_reset = pulse->timer_hi << 8 | pulse->timer_lo;
+void pulse_update_timer_reset(struct Pulse* pulse) {
+    pulse->timer_reset = pulse->timer_hi << 8 | pulse->timer_lo;
 }
 
 void pulse_step(struct Pulse* pulse) {
-    pulse->timer--;
-
     if (pulse->timer <= 0) {
         pulse->timer = pulse->timer_reset;
-        pulse->duty_cycle_idx++;
+        pulse->duty_cycle_idx--;
     }
+
+    pulse->timer--;
 }
 
 void pulse_step_envelope(struct Pulse* pulse) {

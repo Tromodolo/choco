@@ -30,6 +30,8 @@ struct Nes {
     PlayerInput player_1_input;
     uint8_t current_reading_button_value;
 
+    int audio_sample_accumulator;
+
     bool has_new_sample;
     short audio_sample_out;
     float clocks_since_last_sample;

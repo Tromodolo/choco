@@ -35,6 +35,7 @@ int main(void) {
     const AudioStream stream = LoadAudioStream(AUDIO_SAMPLE_RATE, 16, 1);
 
     core = get_core_for_file("/media/games/smb.nes");
+    // core = get_core_for_file("/media/games/dk.nes");
 
     SetAudioStreamCallback(stream, get_samples);
     PlayAudioStream(stream);

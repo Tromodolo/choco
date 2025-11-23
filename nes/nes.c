@@ -29,6 +29,8 @@ struct Nes* nes_init(const char* file_path) {
     nes->audio_sample_out = 0;
     nes->clocks_since_last_sample = 0;
 
+    nes->audio_sample_accumulator = 0;
+
     return nes;
 }
 
@@ -72,10 +74,14 @@ inline bool nes_tick_until_sample(struct Nes* nes, Color* frame_buffer, bool* is
         nes->cpu->dma_just_started = false;
     }
 
+    // Extremely naive resampling that takes the average of all samples generated during the time leading up to a sample
+    nes->audio_sample_accumulator += apu_read_latest_sample(nes->apu);
     if (nes->clocks_since_last_sample >= CLOCKS_PER_SAMPLE) {
-        nes->audio_sample_out = apu_read_latest_sample(nes->apu);
+        nes->audio_sample_out = (short)(nes->audio_sample_accumulator / CLOCKS_PER_SAMPLE);
         nes->clocks_since_last_sample -= CLOCKS_PER_SAMPLE;
         nes->has_new_sample = true;
+
+        nes->audio_sample_accumulator = 0;
     }
     nes->clocks_since_last_sample += 1.0f;
 

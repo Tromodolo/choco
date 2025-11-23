@@ -77,7 +77,7 @@ void apu_write(struct APU* apu, const uint16_t addr, const uint8_t val) {
             apu->pulse_one->length_counter = length_lookup_table[val & 0b11111000 >> 3];
             apu->pulse_one->timer_hi = val & 0b00000111;
             apu->pulse_one->duty_cycle_idx = 0;
-            pulse_reset_timer(apu->pulse_one);
+            pulse_update_timer_reset(apu->pulse_one);
             // apu->square_1_period_hi.value = val;
             break;
         case 0x4004:
@@ -97,12 +97,12 @@ void apu_write(struct APU* apu, const uint16_t addr, const uint8_t val) {
             apu->pulse_two->length_counter = length_lookup_table[val & 0b11111000 >> 3];
             apu->pulse_two->timer_hi = val & 0b00000111;
             apu->pulse_two->duty_cycle_idx = 0;
-            pulse_reset_timer(apu->pulse_two);
+            pulse_update_timer_reset(apu->pulse_two);
             // apu->square_1_period_hi.value = val;
             break;
         case 0x4015:
             apu->pulse_one->enabled = val & 0b1;
-            // apu->pulse_two->enabled = val & 0b10;
+            apu->pulse_two->enabled = val & 0b10;
             break;
     }
 }
@@ -160,16 +160,13 @@ void apu_tick(struct APU* apu) {
         do_frame_counter(apu);
 
         pulse_step(apu->pulse_one);
+        pulse_step(apu->pulse_two);
     }
 
     apu->do_tick = !apu->do_tick;
 }
 
 short apu_read_latest_sample(struct APU* apu) {
-    // Using linear approximation because it is simpler
-    // https://www.nesdev.org/wiki/APU_Mixer
-    // Possiblility to use more accurate mixer logic in the future but this will have to do
-
     const short pulse1 = pulse_get_sample(apu->pulse_one);
     const short pulse2 = pulse_get_sample(apu->pulse_two);
     constexpr short triangle = 0;
