@@ -115,6 +115,15 @@ void apu_write(struct APU* apu, const uint16_t addr, const uint8_t val) {
         case 0x4015:
             apu->pulse_one->enabled = val & 0b1;
             apu->pulse_two->enabled = (val & 0b10) >> 1;
+
+            if (!apu->pulse_one->enabled) {
+                apu->pulse_one->length_counter = 0;
+            }
+
+            if (!apu->pulse_one->enabled) {
+                apu->pulse_two->length_counter = 0;
+            }
+
             break;
         case 0x4017:
             apu->is_five_step = (val & 0b10000000) >> 7;
