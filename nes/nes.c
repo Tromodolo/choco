@@ -77,7 +77,7 @@ inline bool nes_tick_until_sample(struct Nes* nes, Color* frame_buffer, bool* is
     // Extremely naive resampling that takes the average of all samples generated during the time leading up to a sample
     nes->audio_sample_accumulator += apu_read_latest_sample(nes->apu);
     if (nes->clocks_since_last_sample >= CLOCKS_PER_SAMPLE) {
-        nes->audio_sample_out = (short)(nes->audio_sample_accumulator / CLOCKS_PER_SAMPLE);
+        nes->audio_sample_out = (short)((float)nes->audio_sample_accumulator / CLOCKS_PER_SAMPLE);
         nes->clocks_since_last_sample -= CLOCKS_PER_SAMPLE;
         nes->has_new_sample = true;
 
@@ -182,7 +182,7 @@ inline uint8_t read_hw_register(struct Nes* nes, uint16_t addr, bool* is_hw_regi
         case 0x2001: // MASK
         case 0x2005: // SCROLL
         case 0x2006: // ADDR
-        case 0x4017: // GAMEPAD 2
+        case 0x4017: // APU
         case 0x4014: // DMA, doesn't exist in read
         case 0x4000: // APU
         case 0x4001: // APU
@@ -274,10 +274,10 @@ inline void write_hw_register(struct Nes* nes, uint16_t addr, const uint8_t val,
         case 0x4012: // APU
         case 0x4013: // APU
         case 0x4015: // APU
+        case 0x4017: // APU
             apu_write(nes->apu, addr, val);
             *is_hw_register = true;
             break;
-        case 0x4017: // GAMEPAD 2
         default:
             *is_hw_register = false;
             break;

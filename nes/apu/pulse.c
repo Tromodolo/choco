@@ -4,6 +4,7 @@
 
 #include "pulse.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 
 constexpr uint8_t square_duty_cycles[4][8] = {
@@ -13,7 +14,7 @@ constexpr uint8_t square_duty_cycles[4][8] = {
     { 1, 0, 0, 1, 1, 1, 1, 1 }
 };
 
-struct Pulse* pulse_init() {
+struct Pulse* pulse_init(bool is_pulse_one) {
     struct Pulse* pulse = malloc(sizeof(struct Pulse));
 
     pulse->enabled = false;
@@ -23,9 +24,11 @@ struct Pulse* pulse_init() {
     pulse->constant = 0;
 
     pulse->sweep_enabled = 0;
-    pulse->sweep_period = 0;
+    pulse->sweep_divider_reset = 0;
     pulse->sweep_negate = 0;
     pulse->sweep_shift = 0;
+    pulse->sweep_reload = false;
+    pulse->sweep_divider = 0;
 
     pulse->timer = 0;
     pulse->timer_reset = 0;
@@ -37,6 +40,8 @@ struct Pulse* pulse_init() {
     pulse->envelope_start = false;
 
     pulse->duty_cycle_idx = 0;
+
+    pulse->is_pulse_one = is_pulse_one;
 
     return pulse;
 }
@@ -50,6 +55,22 @@ void pulse_update_timer_reset(struct Pulse* pulse) {
 }
 
 void pulse_step(struct Pulse* pulse) {
+    int target_change = pulse->timer_reset >> pulse->sweep_shift;
+    if (pulse->sweep_negate) {
+        // Pulse 1 and Pulse 2 are wired differently
+        // Pulse 1 adds ones-complement, pulse 2 adds twos-complement
+        if (pulse->is_pulse_one) {
+            target_change = -target_change - 1;
+        } else {
+            target_change = -target_change;
+        }
+    }
+
+    pulse->sweep_target = pulse->timer_reset + target_change;
+    if (pulse-> sweep_target < 0) {
+        pulse-> sweep_target = 0;
+    }
+
     if (pulse->timer <= 0) {
         pulse->timer = pulse->timer_reset;
         pulse->duty_cycle_idx--;
@@ -59,6 +80,10 @@ void pulse_step(struct Pulse* pulse) {
 }
 
 void pulse_step_envelope(struct Pulse* pulse) {
+    if (pulse->is_pulse_one) {
+        printf("Envelope %d: div: %d div_reset: %d decay: %d\n", pulse->is_pulse_one ? 1 : 2, pulse->envelope_divider, pulse->envelope_divider_reset, pulse->envelope_decay_level);
+    }
+
     if (pulse->envelope_start) {
         if (pulse->envelope_divider == 0) {
             pulse->envelope_divider = pulse->envelope_divider_reset;
@@ -74,7 +99,7 @@ void pulse_step_envelope(struct Pulse* pulse) {
             pulse->envelope_divider--;
         }
     } else {
-        pulse->envelope_start = false;
+        pulse->envelope_start = true;
         pulse->envelope_decay_level = 15;
         pulse->envelope_divider = pulse->envelope_divider_reset;
     }
@@ -86,9 +111,29 @@ void pulse_step_length(struct Pulse* pulse) {
     }
 }
 
+void pulse_step_sweep(struct Pulse* pulse) {
+    // Tick sweep divider, if 0 set timer reset to target period
+    if (!pulse->sweep_enabled || pulse->sweep_shift == 0) {
+        return;
+    }
+
+    if (pulse->sweep_divider == 0) {
+        pulse->timer_reset = pulse->sweep_target;
+        pulse->sweep_divider = pulse->sweep_divider_reset + 1;
+    }
+
+    if (pulse->sweep_reload) {
+        pulse->sweep_divider = pulse->sweep_divider_reset + 1;
+        pulse->sweep_reload = false;
+    }
+
+    pulse->sweep_divider--;
+}
+
 short pulse_get_sample(const struct Pulse* pulse) {
     const short base_duty_sample = square_duty_cycles[pulse->duty_cycle][pulse->duty_cycle_idx];
-    if (!pulse->enabled || pulse->length_counter == 0 || base_duty_sample == 0) {
+    if (!pulse->enabled || pulse->length_counter == 0 || base_duty_sample == 0 ||
+        pulse->timer_reset < 8 || pulse->sweep_target >= 0x800) {
         return 0;
     }
 

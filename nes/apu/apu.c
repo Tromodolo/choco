@@ -5,6 +5,7 @@
 #include "../nes.h"
 #include "apu.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 
 void do_frame_counter(struct APU* apu);
@@ -32,20 +33,15 @@ struct APU* apu_init(struct Nes* nes) {
         tnd_lookup_table[i] = 163.67f / (24329.0f / (float)(i + 100));
     }
 
-    apu->pulse_one = pulse_init();
-    apu->pulse_two = pulse_init();
-
-    // apu->square_1_ctrl.value = 0;
-    // apu->square_1_period_hi.value = 0;
-    // apu->square_1_sweep.value = 0;
-    // apu->square_1_period_lo = 0;
-    //
-    // apu->square_1_sample = 0;
+    apu->pulse_one = pulse_init(true);
+    apu->pulse_two = pulse_init(false);
 
     apu->frame_counter = 0;
     apu->last_sample = 0;
-    apu->is_five_step = false;
     apu->do_tick = true;
+
+    apu->is_five_step = false;
+    apu->irq_inhibit = false;
 
     return apu;
 }
@@ -64,21 +60,28 @@ void apu_write(struct APU* apu, const uint16_t addr, const uint8_t val) {
             apu->pulse_one->constant = (val & 0b00010000) >> 4;
             apu->pulse_one->envelope_divider_reset = val & 0b00001111;
             apu->pulse_one->envelope_loop = apu->pulse_one->length_counter_halt;
-
-            // apu->square_1_ctrl.value = val;
             break;
         case 0x4001:
-            // apu->square_1_sweep.value = val;
+            apu->pulse_one->sweep_enabled = (val & 0b10000000) >> 7;
+            apu->pulse_one->sweep_divider_reset = (val & 0b01110000) >> 4;
+            apu->pulse_one->sweep_negate = (val & 0b00001000) >> 3;
+            apu->pulse_one->sweep_shift = val & 0b00000111;
+            apu->pulse_one->sweep_reload = true;
             break;
         case 0x4002:
             apu->pulse_one->timer_lo = val;
             break;
         case 0x4003:
-            apu->pulse_one->length_counter = length_lookup_table[val & 0b11111000 >> 3];
+            if (apu->pulse_one->enabled && apu->pulse_one->length_counter == 0) {
+                apu->pulse_one->length_counter = length_lookup_table[(val & 0b11111000) >> 3];
+            } else {
+                apu->pulse_one->length_counter = length_lookup_table[(val & 0b11111000) >> 3];
+            }
+
             apu->pulse_one->timer_hi = val & 0b00000111;
             apu->pulse_one->duty_cycle_idx = 0;
+            apu->pulse_one->envelope_start = false;
             pulse_update_timer_reset(apu->pulse_one);
-            // apu->square_1_period_hi.value = val;
             break;
         case 0x4004:
             apu->pulse_two->duty_cycle = (val & 0b11000000) >> 6;
@@ -88,21 +91,34 @@ void apu_write(struct APU* apu, const uint16_t addr, const uint8_t val) {
             apu->pulse_two->envelope_loop = apu->pulse_two->length_counter_halt;
             break;
         case 0x4005:
-            // apu->square_1_sweep.value = val;
+            apu->pulse_two->sweep_enabled = (val & 0b10000000) >> 7;
+            apu->pulse_two->sweep_divider_reset = (val & 0b01110000) >> 4;
+            apu->pulse_two->sweep_negate = (val & 0b00001000) >> 3;
+            apu->pulse_two->sweep_shift = val & 0b00000111;
+            apu->pulse_two->sweep_reload = true;
             break;
         case 0x4006:
             apu->pulse_two->timer_lo = val;
             break;
         case 0x4007:
-            apu->pulse_two->length_counter = length_lookup_table[val & 0b11111000 >> 3];
+            if (apu->pulse_two->enabled && apu->pulse_two->length_counter == 0) {
+                apu->pulse_two->length_counter = length_lookup_table[(val & 0b11111000) >> 3];
+            } else {
+                apu->pulse_two->length_counter = length_lookup_table[(val & 0b11111000) >> 3];
+            }
+
             apu->pulse_two->timer_hi = val & 0b00000111;
             apu->pulse_two->duty_cycle_idx = 0;
+            apu->pulse_two->envelope_start = false;
             pulse_update_timer_reset(apu->pulse_two);
-            // apu->square_1_period_hi.value = val;
             break;
         case 0x4015:
             apu->pulse_one->enabled = val & 0b1;
-            apu->pulse_two->enabled = val & 0b10;
+            apu->pulse_two->enabled = (val & 0b10) >> 1;
+            break;
+        case 0x4017:
+            apu->is_five_step = (val & 0b10000000) >> 7;
+            apu->irq_inhibit = (val & 0b01000000) >> 6;
             break;
     }
 }
@@ -111,28 +127,37 @@ inline void do_frame_counter(struct APU* apu) {
     switch (apu->frame_counter) {
         case 3728:  // clock envelopes, triangle
             pulse_step_envelope(apu->pulse_one);
+
             pulse_step_envelope(apu->pulse_two);
             break;
         case 7456:  // clock envelopes, triangle, length, sweep
             pulse_step_envelope(apu->pulse_one);
             pulse_step_length(apu->pulse_one);
+            pulse_step_sweep(apu->pulse_one);
+
             pulse_step_envelope(apu->pulse_two);
             pulse_step_length(apu->pulse_two);
+            pulse_step_sweep(apu->pulse_two);
             break;
         case 11185: // clock envelopes, triangle
             pulse_step_envelope(apu->pulse_one);
+
             pulse_step_envelope(apu->pulse_two);
             break;
         case 14914: // 4-Step final envelopes, triangle, length, sweep
             if (!apu->is_five_step) {
                 pulse_step_envelope(apu->pulse_one);
                 pulse_step_length(apu->pulse_one);
+                pulse_step_sweep(apu->pulse_one);
+
                 pulse_step_envelope(apu->pulse_two);
                 pulse_step_length(apu->pulse_two);
+                pulse_step_sweep(apu->pulse_two);
             }
             break;
         case 14915: // 4-Step 0-frame
             if (!apu->is_five_step) {
+                apu->frame_counter = 0;
                 // TODO: Handle frame interrupt
             }
             break;
@@ -140,12 +165,16 @@ inline void do_frame_counter(struct APU* apu) {
             if (apu->is_five_step) {
                 pulse_step_envelope(apu->pulse_one);
                 pulse_step_length(apu->pulse_one);
+                pulse_step_sweep(apu->pulse_one);
+
                 pulse_step_envelope(apu->pulse_two);
                 pulse_step_length(apu->pulse_two);
+                pulse_step_sweep(apu->pulse_two);
             }
             break;
         case 18641: // 5-step 0-frame
             if (apu->is_five_step) {
+                apu->frame_counter = 0;
                 // TODO: Handle frame interrupt
             }
             break;

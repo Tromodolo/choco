@@ -14,15 +14,18 @@ struct Pulse {
     uint8_t constant : 1;
 
     uint8_t sweep_enabled : 1;
-    uint8_t sweep_period : 3;
+    uint8_t sweep_divider_reset : 3;
     uint8_t sweep_negate : 1;
     uint8_t sweep_shift : 3;
+    bool sweep_reload;
+    int sweep_target;
+    uint8_t sweep_divider;
 
     uint8_t timer_lo : 8;
     uint8_t timer_hi : 3;
 
     uint8_t envelope_decay_level : 4;
-    uint8_t envelope_divider : 4; // Volume
+    uint8_t envelope_divider; // Volume
     uint8_t envelope_divider_reset : 4; // Volume
     bool envelope_loop;
     bool envelope_start;
@@ -32,15 +35,18 @@ struct Pulse {
     uint8_t length_counter;
 
     uint8_t duty_cycle_idx : 3;
+
+    bool is_pulse_one;
 };
 
-struct Pulse* pulse_init();
+struct Pulse* pulse_init(bool is_pulse_one);
 void pulse_free(struct Pulse* pulse);
 
 void pulse_update_timer_reset(struct Pulse* pulse);
 void pulse_step(struct Pulse* pulse);
 void pulse_step_envelope(struct Pulse* pulse);
 void pulse_step_length(struct Pulse* pulse);
+void pulse_step_sweep(struct Pulse* pulse);
 short pulse_get_sample(const struct Pulse* pulse);
 
 #endif //PULSE_H

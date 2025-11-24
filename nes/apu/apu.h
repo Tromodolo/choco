@@ -42,8 +42,10 @@ struct APU {
     // State
     uint16_t frame_counter;
     bool do_tick;
-    bool is_five_step;
     uint16_t last_sample;
+
+    bool is_five_step;
+    bool irq_inhibit;
 };
 
 struct APU* apu_init(struct Nes* nes);
