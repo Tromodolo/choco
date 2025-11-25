@@ -39,6 +39,8 @@ struct Pulse* pulse_init(bool is_pulse_one) {
     pulse->envelope_loop = false;
     pulse->envelope_start = false;
 
+    pulse->pending_mute = false;
+
     pulse->duty_cycle_idx = 0;
 
     pulse->is_pulse_one = is_pulse_one;
@@ -80,10 +82,6 @@ void pulse_step(struct Pulse* pulse) {
 }
 
 void pulse_step_envelope(struct Pulse* pulse) {
-    if (pulse->is_pulse_one) {
-        printf("Envelope %d: div: %d div_reset: %d decay: %d\n", pulse->is_pulse_one ? 1 : 2, pulse->envelope_divider, pulse->envelope_divider_reset, pulse->envelope_decay_level);
-    }
-
     if (pulse->envelope_start) {
         if (pulse->envelope_divider == 0) {
             pulse->envelope_divider = pulse->envelope_divider_reset;
@@ -106,6 +104,12 @@ void pulse_step_envelope(struct Pulse* pulse) {
 }
 
 void pulse_step_length(struct Pulse* pulse) {
+    // The Pulse unit doesn't mute immediately when disabled, it sets the length to 0 and then on the next tick mutes
+    if (pulse->pending_mute) {
+        pulse->length_counter = 0;
+        pulse->pending_mute = false;
+    }
+
     if (!pulse->length_counter_halt && pulse->length_counter > 0) {
         pulse->length_counter--;
     }

@@ -34,6 +34,8 @@ struct Pulse {
     uint16_t timer_reset;
     uint8_t length_counter;
 
+    bool pending_mute;
+
     uint8_t duty_cycle_idx : 3;
 
     bool is_pulse_one;

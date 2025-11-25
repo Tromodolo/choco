@@ -117,11 +117,11 @@ void apu_write(struct APU* apu, const uint16_t addr, const uint8_t val) {
             apu->pulse_two->enabled = (val & 0b10) >> 1;
 
             if (!apu->pulse_one->enabled) {
-                apu->pulse_one->length_counter = 0;
+                apu->pulse_one->pending_mute = true;
             }
 
             if (!apu->pulse_one->enabled) {
-                apu->pulse_two->length_counter = 0;
+                apu->pulse_two->pending_mute = true;
             }
 
             break;
