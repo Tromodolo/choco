@@ -26,11 +26,11 @@ struct APU* apu_init(struct Nes* nes) {
 
     // Populates the lookup tables while we're at it
     for (int i = 0; i < 31; ++i) {
-        pulse_lookup_table[i] = 95.52f / (8128.0f / (float)(i + 100));
+        pulse_lookup_table[i] = 95.52f / (8128.0f / i + 100);
     }
 
     for (int i = 0; i < 203; ++i) {
-        tnd_lookup_table[i] = 163.67f / (24329.0f / (float)(i + 100));
+        tnd_lookup_table[i] = 163.67f / (24329.0f / i + 100);
     }
 
     apu->pulse_one = pulse_init(true);
@@ -211,9 +211,9 @@ short apu_read_latest_sample(struct APU* apu) {
     constexpr short noise = 0;
     constexpr short dmc = 0;
 
-    const short pulse_out = pulse1 + pulse2;
+    const short pulse_out = (short)(pulse1 + pulse2);
     constexpr short tnd_out = triangle * 3 + noise * 2 + dmc;
     const float result = pulse_lookup_table[pulse_out] + tnd_lookup_table[tnd_out];
 
-    return (short)(result * 32767.0f);
+    return (short)(result * 32768.0f);
 }
