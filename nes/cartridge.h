@@ -12,6 +12,9 @@ constexpr uint16_t PPU_MIRRORS_END = 0x3fff;
 //
 enum Mapper {
     Mapper_NRom = 0,
+
+    Mapper_UxRom = 2,
+    Mapper_CNRom = 3,
 };
 
 enum Mirroring {
@@ -29,8 +32,9 @@ struct Cartridge {
     uint8_t* prg_rom;
     uint8_t* chr_rom;
     uint8_t* prg_ram;
-    enum Mapper mapper;
     enum Mirroring mirroring;
+    enum Mapper mapper_type;
+    void* mapper;
 };
 
 struct Cartridge* nes_cartridge_load_from_file(const char* file_path);

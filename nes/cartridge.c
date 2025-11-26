@@ -4,6 +4,8 @@
 
 #include "cartridge.h"
 
+#include "mappers/mapper.h"
+
 constexpr int NES_TAG_1 = 0x00;
 constexpr int NES_TAG_2 = 0x01;
 constexpr int NES_TAG_3 = 0x02;
@@ -100,7 +102,7 @@ struct Cartridge* nes_cartridge_load_from_buffer(const uint8_t* buffer, const lo
     prg_ram_size = 0xFFFF;
 #endif
 
-    cartridge->mapper = mapper;
+    cartridge->mapper_type = mapper;
     cartridge->mirroring = mirroring;
 
     cartridge->prg_rom_size = prg_rom_size;
@@ -122,10 +124,14 @@ struct Cartridge* nes_cartridge_load_from_buffer(const uint8_t* buffer, const lo
         memcpy(cartridge->chr_rom, &buffer[chr_rom_start], chr_rom_size * sizeof(uint8_t));
     }
 
+    mapper_init(cartridge);
+
     return cartridge;
 }
 
 void nes_cartridge_free(struct Cartridge* cartridge) {
+    mapper_free(cartridge);
+
     free(cartridge->prg_rom);
     free(cartridge->prg_ram);
     free(cartridge->chr_rom);
@@ -136,6 +142,12 @@ inline uint8_t nes_cartridge_read_char(const struct Cartridge* cartridge, uint16
 #ifdef TESTS
     return cartridge->prg_ram[addr];
 #endif
+
+    bool is_mapped = false;
+    const uint8_t mapper_value = mapper_cpu_read(cartridge, addr, &is_mapped);
+    if (is_mapped) {
+        return mapper_value;
+    }
 
     if (addr <= RAM_MIRRORS_END) {
         return cartridge->prg_ram[addr & 0x7FF];
@@ -152,6 +164,12 @@ inline void nes_cartridge_write_char(const struct Cartridge* cartridge, uint16_t
     cartridge->prg_ram[addr] = val;
     return;
 #endif
+
+    bool is_mapped = false;
+    mapper_cpu_write(cartridge, addr, val, &is_mapped);
+    if (is_mapped) {
+        return;
+    }
 
     if (addr <= RAM_MIRRORS_END) {
         // if (addr == 0x02 || addr == 0x03)

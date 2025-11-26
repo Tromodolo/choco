@@ -23,7 +23,9 @@ add_executable(choco
         tests/auto-tests.c
         tests/json/cJSON.c
         nes/apu/pulse.c
-        nes/apu/pulse.h)
+        nes/mappers/mapper.c
+        nes/mappers/impl/nrom.c
+        nes/mappers/impl/uxrom.c)
 
 target_link_libraries(choco raylib)
 
