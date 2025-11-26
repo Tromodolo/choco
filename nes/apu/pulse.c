@@ -7,6 +7,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "apu.h"
+
+void update_timer_reset(struct Pulse* pulse);
+
 constexpr uint8_t square_duty_cycles[4][8] = {
     { 0, 1, 0, 0, 0, 0, 0, 0 },
     { 0, 1, 1, 0, 0, 0, 0, 0 },
@@ -52,7 +56,41 @@ void pulse_free(struct Pulse* pulse) {
     free(pulse);
 }
 
-void pulse_update_timer_reset(struct Pulse* pulse) {
+void pulse_write_ctrl_one(struct Pulse* pulse, const uint8_t val) {
+    pulse->duty_cycle = (val & 0b11000000) >> 6;
+    pulse->length_counter_halt = (val & 0b00100000) >> 5;
+    pulse->constant = (val & 0b00010000) >> 4;
+    pulse->envelope_divider_reset = val & 0b00001111;
+    pulse->envelope_loop = pulse->length_counter_halt;
+}
+
+void pulse_write_sweep(struct Pulse* pulse, const uint8_t val) {
+    pulse->sweep_enabled = (val & 0b10000000) >> 7;
+    pulse->sweep_divider_reset = (val & 0b01110000) >> 4;
+    pulse->sweep_negate = (val & 0b00001000) >> 3;
+    pulse->sweep_shift = val & 0b00000111;
+    pulse->sweep_reload = true;
+}
+
+void pulse_write_timer_lo(struct Pulse* pulse, const uint8_t val) {
+    pulse->timer_lo = val;
+    update_timer_reset(pulse);
+}
+
+void pulse_write_ctrl_two(struct Pulse* pulse, const uint8_t val) {
+    if (pulse->enabled && pulse->length_counter == 0) {
+        pulse->length_counter = apu_length_lookup_table[(val & 0b11111000) >> 3];
+    } else {
+        pulse->length_counter = apu_length_lookup_table[(val & 0b11111000) >> 3];
+    }
+
+    pulse->timer_hi = val & 0b00000111;
+    pulse->duty_cycle_idx = 0;
+    pulse->envelope_start = false;
+    update_timer_reset(pulse);
+}
+
+inline void update_timer_reset(struct Pulse* pulse) {
     pulse->timer_reset = pulse->timer_hi << 8 | pulse->timer_lo;
 }
 

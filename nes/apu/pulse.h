@@ -44,7 +44,11 @@ struct Pulse {
 struct Pulse* pulse_init(bool is_pulse_one);
 void pulse_free(struct Pulse* pulse);
 
-void pulse_update_timer_reset(struct Pulse* pulse);
+void pulse_write_ctrl_one(struct Pulse* pulse, const uint8_t val); // 4000
+void pulse_write_sweep(struct Pulse* pulse, const uint8_t val); // 4001
+void pulse_write_timer_lo(struct Pulse* pulse, const uint8_t val); // 4002
+void pulse_write_ctrl_two(struct Pulse* pulse, const uint8_t val); // 4003
+
 void pulse_step(struct Pulse* pulse);
 void pulse_step_envelope(struct Pulse* pulse);
 void pulse_step_length(struct Pulse* pulse);

@@ -9,11 +9,8 @@
 #include <stdlib.h>
 
 void do_frame_counter(struct APU* apu);
-
-constexpr uint8_t length_lookup_table[] = {
-    10, 254, 20, 2, 40, 4, 80, 6, 160, 8, 60, 10, 14, 12, 26, 14,
-    12, 16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30,
-};
+void step_envelope_and_triangle(struct APU* apu);
+void step_length_and_sweep(struct APU* apu);
 
 constexpr int emulator_output_volume = 1000;
 
@@ -55,64 +52,28 @@ void apu_free(struct APU* apu) {
 void apu_write(struct APU* apu, const uint16_t addr, const uint8_t val) {
     switch (addr) {
         case 0x4000:
-            apu->pulse_one->duty_cycle = (val & 0b11000000) >> 6;
-            apu->pulse_one->length_counter_halt = (val & 0b00100000) >> 5;
-            apu->pulse_one->constant = (val & 0b00010000) >> 4;
-            apu->pulse_one->envelope_divider_reset = val & 0b00001111;
-            apu->pulse_one->envelope_loop = apu->pulse_one->length_counter_halt;
+            pulse_write_ctrl_one(apu->pulse_one, val);
             break;
         case 0x4001:
-            apu->pulse_one->sweep_enabled = (val & 0b10000000) >> 7;
-            apu->pulse_one->sweep_divider_reset = (val & 0b01110000) >> 4;
-            apu->pulse_one->sweep_negate = (val & 0b00001000) >> 3;
-            apu->pulse_one->sweep_shift = val & 0b00000111;
-            apu->pulse_one->sweep_reload = true;
+            pulse_write_sweep(apu->pulse_one, val);
             break;
         case 0x4002:
-            apu->pulse_one->timer_lo = val;
-            pulse_update_timer_reset(apu->pulse_one);
+            pulse_write_timer_lo(apu->pulse_one, val);
             break;
         case 0x4003:
-            if (apu->pulse_one->enabled && apu->pulse_one->length_counter == 0) {
-                apu->pulse_one->length_counter = length_lookup_table[(val & 0b11111000) >> 3];
-            } else {
-                apu->pulse_one->length_counter = length_lookup_table[(val & 0b11111000) >> 3];
-            }
-
-            apu->pulse_one->timer_hi = val & 0b00000111;
-            apu->pulse_one->duty_cycle_idx = 0;
-            apu->pulse_one->envelope_start = false;
-            pulse_update_timer_reset(apu->pulse_one);
+            pulse_write_ctrl_two(apu->pulse_one, val);
             break;
         case 0x4004:
-            apu->pulse_two->duty_cycle = (val & 0b11000000) >> 6;
-            apu->pulse_two->length_counter_halt = (val & 0b00100000) >> 5;
-            apu->pulse_two->constant = (val & 0b00010000) >> 4;
-            apu->pulse_two->envelope_divider_reset = val & 0b00001111;
-            apu->pulse_two->envelope_loop = apu->pulse_two->length_counter_halt;
+            pulse_write_ctrl_one(apu->pulse_two, val);
             break;
         case 0x4005:
-            apu->pulse_two->sweep_enabled = (val & 0b10000000) >> 7;
-            apu->pulse_two->sweep_divider_reset = (val & 0b01110000) >> 4;
-            apu->pulse_two->sweep_negate = (val & 0b00001000) >> 3;
-            apu->pulse_two->sweep_shift = val & 0b00000111;
-            apu->pulse_two->sweep_reload = true;
+            pulse_write_sweep(apu->pulse_two, val);
             break;
         case 0x4006:
-            apu->pulse_two->timer_lo = val;
-            pulse_update_timer_reset(apu->pulse_two);
+            pulse_write_timer_lo(apu->pulse_two, val);
             break;
         case 0x4007:
-            if (apu->pulse_two->enabled && apu->pulse_two->length_counter == 0) {
-                apu->pulse_two->length_counter = length_lookup_table[(val & 0b11111000) >> 3];
-            } else {
-                apu->pulse_two->length_counter = length_lookup_table[(val & 0b11111000) >> 3];
-            }
-
-            apu->pulse_two->timer_hi = val & 0b00000111;
-            apu->pulse_two->duty_cycle_idx = 0;
-            apu->pulse_two->envelope_start = false;
-            pulse_update_timer_reset(apu->pulse_two);
+            pulse_write_ctrl_two(apu->pulse_two, val);
             break;
         case 0x4015:
             apu->pulse_one->enabled = val & 0b1;
@@ -125,7 +86,6 @@ void apu_write(struct APU* apu, const uint16_t addr, const uint8_t val) {
             if (!apu->pulse_one->enabled) {
                 apu->pulse_two->pending_mute = true;
             }
-
             break;
         case 0x4017:
             apu->is_five_step = (val & 0b10000000) >> 7;
@@ -137,33 +97,19 @@ void apu_write(struct APU* apu, const uint16_t addr, const uint8_t val) {
 inline void do_frame_counter(struct APU* apu) {
     switch (apu->frame_counter) {
         case 3728:  // clock envelopes, triangle
-            pulse_step_envelope(apu->pulse_one);
-
-            pulse_step_envelope(apu->pulse_two);
+            step_envelope_and_triangle(apu);
             break;
         case 7456:  // clock envelopes, triangle, length, sweep
-            pulse_step_envelope(apu->pulse_one);
-            pulse_step_length(apu->pulse_one);
-            pulse_step_sweep(apu->pulse_one);
-
-            pulse_step_envelope(apu->pulse_two);
-            pulse_step_length(apu->pulse_two);
-            pulse_step_sweep(apu->pulse_two);
+            step_envelope_and_triangle(apu);
+            step_length_and_sweep(apu);
             break;
         case 11185: // clock envelopes, triangle
-            pulse_step_envelope(apu->pulse_one);
-
-            pulse_step_envelope(apu->pulse_two);
+            step_envelope_and_triangle(apu);
             break;
         case 14914: // 4-Step final envelopes, triangle, length, sweep
             if (!apu->is_five_step) {
-                pulse_step_envelope(apu->pulse_one);
-                pulse_step_length(apu->pulse_one);
-                pulse_step_sweep(apu->pulse_one);
-
-                pulse_step_envelope(apu->pulse_two);
-                pulse_step_length(apu->pulse_two);
-                pulse_step_sweep(apu->pulse_two);
+                step_envelope_and_triangle(apu);
+                step_length_and_sweep(apu);
             }
             break;
         case 14915: // 4-Step 0-frame
@@ -174,13 +120,8 @@ inline void do_frame_counter(struct APU* apu) {
             break;
         case 18640: // 5-Step final envelopes, triangle, length, sweep
             if (apu->is_five_step) {
-                pulse_step_envelope(apu->pulse_one);
-                pulse_step_length(apu->pulse_one);
-                pulse_step_sweep(apu->pulse_one);
-
-                pulse_step_envelope(apu->pulse_two);
-                pulse_step_length(apu->pulse_two);
-                pulse_step_sweep(apu->pulse_two);
+                step_envelope_and_triangle(apu);
+                step_length_and_sweep(apu);
             }
             break;
         case 18641: // 5-step 0-frame
@@ -193,6 +134,19 @@ inline void do_frame_counter(struct APU* apu) {
     }
 
     apu->frame_counter++;
+}
+
+inline void step_envelope_and_triangle(struct APU* apu) {
+    pulse_step_envelope(apu->pulse_one);
+    pulse_step_envelope(apu->pulse_two);
+}
+
+inline void step_length_and_sweep(struct APU* apu) {
+    pulse_step_length(apu->pulse_one);
+    pulse_step_sweep(apu->pulse_one);
+
+    pulse_step_length(apu->pulse_two);
+    pulse_step_sweep(apu->pulse_two);
 }
 
 void apu_tick(struct APU* apu) {
