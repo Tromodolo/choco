@@ -73,12 +73,12 @@ void pulse_step(struct Pulse* pulse) {
         pulse-> sweep_target = 0;
     }
 
-    if (pulse->timer <= 0) {
+    if (pulse->timer == 0) {
         pulse->timer = pulse->timer_reset;
         pulse->duty_cycle_idx--;
+    } else {
+        pulse->timer--;
     }
-
-    pulse->timer--;
 }
 
 void pulse_step_envelope(struct Pulse* pulse) {

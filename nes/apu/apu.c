@@ -70,6 +70,7 @@ void apu_write(struct APU* apu, const uint16_t addr, const uint8_t val) {
             break;
         case 0x4002:
             apu->pulse_one->timer_lo = val;
+            pulse_update_timer_reset(apu->pulse_one);
             break;
         case 0x4003:
             if (apu->pulse_one->enabled && apu->pulse_one->length_counter == 0) {
@@ -99,6 +100,7 @@ void apu_write(struct APU* apu, const uint16_t addr, const uint8_t val) {
             break;
         case 0x4006:
             apu->pulse_two->timer_lo = val;
+            pulse_update_timer_reset(apu->pulse_two);
             break;
         case 0x4007:
             if (apu->pulse_two->enabled && apu->pulse_two->length_counter == 0) {
@@ -215,5 +217,5 @@ short apu_read_latest_sample(struct APU* apu) {
     constexpr short tnd_out = triangle * 3 + noise * 2 + dmc;
     const float result = pulse_lookup_table[pulse_out] + tnd_lookup_table[tnd_out];
 
-    return (short)(result * 32768.0f);
+    return (short)(result * 32767.0f);
 }
