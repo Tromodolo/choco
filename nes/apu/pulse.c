@@ -9,7 +9,7 @@
 
 #include "apu.h"
 
-void update_timer_reset(struct Pulse* pulse);
+void update_pulse_timer_reset(struct Pulse* pulse);
 
 constexpr uint8_t square_duty_cycles[4][8] = {
     { 0, 1, 0, 0, 0, 0, 0, 0 },
@@ -74,7 +74,7 @@ void pulse_write_sweep(struct Pulse* pulse, const uint8_t val) {
 
 void pulse_write_timer_lo(struct Pulse* pulse, const uint8_t val) {
     pulse->timer_lo = val;
-    update_timer_reset(pulse);
+    update_pulse_timer_reset(pulse);
 }
 
 void pulse_write_ctrl_two(struct Pulse* pulse, const uint8_t val) {
@@ -87,10 +87,10 @@ void pulse_write_ctrl_two(struct Pulse* pulse, const uint8_t val) {
     pulse->timer_hi = val & 0b00000111;
     pulse->duty_cycle_idx = 0;
     pulse->envelope_start = false;
-    update_timer_reset(pulse);
+    update_pulse_timer_reset(pulse);
 }
 
-inline void update_timer_reset(struct Pulse* pulse) {
+inline void update_pulse_timer_reset(struct Pulse* pulse) {
     pulse->timer_reset = pulse->timer_hi << 8 | pulse->timer_lo;
 }
 

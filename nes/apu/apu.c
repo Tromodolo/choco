@@ -32,6 +32,7 @@ struct APU* apu_init(struct Nes* nes) {
 
     apu->pulse_one = pulse_init(true);
     apu->pulse_two = pulse_init(false);
+    apu->triangle = triangle_init();
 
     apu->frame_counter = 0;
     apu->last_sample = 0;
@@ -46,6 +47,7 @@ struct APU* apu_init(struct Nes* nes) {
 void apu_free(struct APU* apu) {
     pulse_free(apu->pulse_one);
     pulse_free(apu->pulse_two);
+    triangle_free(apu->triangle);
     free(apu);
 }
 
@@ -75,9 +77,19 @@ void apu_write(struct APU* apu, const uint16_t addr, const uint8_t val) {
         case 0x4007:
             pulse_write_ctrl_two(apu->pulse_two, val);
             break;
+        case 0x4008:
+            triangle_write_linear_counter(apu->triangle, val);
+            break;
+        case 0x400A:
+            triangle_write_timer_lo(apu->triangle, val);
+            break;
+        case 0x400B:
+            triangle_write_timer_hi_and_length(apu->triangle, val);
+            break;
         case 0x4015:
             apu->pulse_one->enabled = val & 0b1;
             apu->pulse_two->enabled = (val & 0b10) >> 1;
+            apu->triangle->enabled = (val & 0b100) >> 2;
 
             if (!apu->pulse_one->enabled) {
                 apu->pulse_one->pending_mute = true;
@@ -85,6 +97,10 @@ void apu_write(struct APU* apu, const uint16_t addr, const uint8_t val) {
 
             if (!apu->pulse_one->enabled) {
                 apu->pulse_two->pending_mute = true;
+            }
+
+            if (!apu->triangle->enabled) {
+                apu->triangle->pending_mute = true;
             }
             break;
         case 0x4017:
@@ -139,6 +155,7 @@ inline void do_frame_counter(struct APU* apu) {
 inline void step_envelope_and_triangle(struct APU* apu) {
     pulse_step_envelope(apu->pulse_one);
     pulse_step_envelope(apu->pulse_two);
+    triangle_step_linear_counter(apu->triangle);
 }
 
 inline void step_length_and_sweep(struct APU* apu) {
@@ -147,6 +164,8 @@ inline void step_length_and_sweep(struct APU* apu) {
 
     pulse_step_length(apu->pulse_two);
     pulse_step_sweep(apu->pulse_two);
+
+    triangle_step_length(apu->triangle);
 }
 
 void apu_tick(struct APU* apu) {
@@ -156,6 +175,7 @@ void apu_tick(struct APU* apu) {
         pulse_step(apu->pulse_one);
         pulse_step(apu->pulse_two);
     }
+    triangle_step(apu->triangle);
 
     apu->do_tick = !apu->do_tick;
 }
@@ -163,12 +183,12 @@ void apu_tick(struct APU* apu) {
 short apu_read_latest_sample(struct APU* apu) {
     const short pulse1 = pulse_get_sample(apu->pulse_one);
     const short pulse2 = pulse_get_sample(apu->pulse_two);
-    constexpr short triangle = 0;
+    const short triangle = triangle_get_sample(apu->triangle);
     constexpr short noise = 0;
     constexpr short dmc = 0;
 
     const short pulse_out = (short)(pulse1 + pulse2);
-    constexpr short tnd_out = triangle * 3 + noise * 2 + dmc;
+    const short tnd_out = triangle * 3 + noise * 2 + dmc;
     const float result = pulse_lookup_table[pulse_out] + tnd_lookup_table[tnd_out];
 
     return (short)(result * 32767.0f);

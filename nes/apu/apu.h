@@ -6,6 +6,7 @@
 #define APU_H
 
 #include "pulse.h"
+#include "triangle.h"
 
 constexpr uint8_t apu_length_lookup_table[] = {
     10, 254, 20, 2, 40, 4, 80, 6, 160, 8, 60, 10, 14, 12, 26, 14,
@@ -43,6 +44,7 @@ typedef union {
 struct APU {
     struct Pulse* pulse_one;
     struct Pulse* pulse_two;
+    struct Triangle* triangle;
 
     // State
     uint16_t frame_counter;

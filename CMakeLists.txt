@@ -17,12 +17,13 @@ add_executable(choco
         nes/cpu/cpu.c
         nes/ppu/ppu.c
         nes/apu/apu.c
+        nes/apu/pulse.c
+        nes/apu/triangle.c
         nes/cpu/instructions.c
         nes/nes-logging.c
         tests/tests.c
         tests/auto-tests.c
         tests/json/cJSON.c
-        nes/apu/pulse.c
         nes/mappers/mapper.c
         nes/mappers/impl/nrom.c
         nes/mappers/impl/uxrom.c)
