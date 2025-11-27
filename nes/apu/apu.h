@@ -7,6 +7,7 @@
 
 #include "pulse.h"
 #include "triangle.h"
+#include "noise.h"
 #include "../../blip_buf/blip_buf.h"
 
 constexpr uint8_t apu_length_lookup_table[] = {
@@ -46,6 +47,7 @@ struct APU {
     struct Pulse* pulse_one;
     struct Pulse* pulse_two;
     struct Triangle* triangle;
+    struct Noise* noise;
 
     uint16_t frame_counter;
     bool do_tick;

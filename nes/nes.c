@@ -194,6 +194,9 @@ inline uint8_t read_hw_register(struct Nes* nes, uint16_t addr, bool* is_hw_regi
         case 0x4015: // APU
         case 0x400A: // APU
         case 0x400B: // APU
+        case 0x400C: // APU
+        case 0x400E: // APU
+        case 0x400F: // APU
             *is_hw_register = true;
             // Read-only
             return 0;
@@ -272,6 +275,9 @@ inline void write_hw_register(struct Nes* nes, uint16_t addr, const uint8_t val,
         case 0x4015: // APU
         case 0x400A: // APU
         case 0x400B: // APU
+        case 0x400C: // APU
+        case 0x400E: // APU
+        case 0x400F: // APU
         case 0x4017: // APU
             apu_write(nes->apu, addr, val);
             *is_hw_register = true;

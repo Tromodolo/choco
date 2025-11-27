@@ -20,6 +20,7 @@ add_executable(choco
         nes/apu/apu.c
         nes/apu/pulse.c
         nes/apu/triangle.c
+        nes/apu/noise.c
         nes/cpu/instructions.c
         nes/nes-logging.c
         tests/tests.c
