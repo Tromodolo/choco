@@ -110,7 +110,7 @@ void triangle_step_linear_counter(struct Triangle* triangle) {
 
 short triangle_get_sample(const struct Triangle* triangle) {
     const short sample_step = triangle_cycle[triangle->step_cycle_idx];
-    if (!triangle->enabled || sample_step == 0) {
+    if (!triangle->enabled || sample_step == 0 || triangle->timer_reset < 2 || triangle->timer_reset >= 0x7FE) {
         return 0;
     }
 
