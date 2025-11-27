@@ -7,6 +7,7 @@
 
 #include "pulse.h"
 #include "triangle.h"
+#include "../../blip_buf/blip_buf.h"
 
 constexpr uint8_t apu_length_lookup_table[] = {
     10, 254, 20, 2, 40, 4, 80, 6, 160, 8, 60, 10, 14, 12, 26, 14,
@@ -46,19 +47,25 @@ struct APU {
     struct Pulse* pulse_two;
     struct Triangle* triangle;
 
-    // State
     uint16_t frame_counter;
     bool do_tick;
-    uint16_t last_sample;
+
+    short last_pulse_sample;
+    short last_tnd_sample;
 
     bool is_five_step;
     bool irq_inhibit;
+
+    blip_t* blip_pulse;
+    blip_t* blip_tnd;
 };
 
 struct APU* apu_init(struct Nes* nes);
 void apu_free(struct APU* apu);
 void apu_write(struct APU* apu, uint16_t addr, uint8_t val);
-void apu_tick(struct APU* apu);
-short apu_read_latest_sample(struct APU* apu);
+void apu_tick(struct APU* apu, uint64_t global_cycle_count);
+
+uint16_t apu_num_clocks_for_sample_count(struct APU* apu, uint16_t sample_count);
+void apu_read_samples(struct APU* apu, short* buffer, uint16_t sample_count, uint64_t cycle_count);
 
 #endif //APU_H

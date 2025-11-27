@@ -11,6 +11,7 @@ endif (TESTS)
 
 add_executable(choco
         main.c
+        blip_buf/blip_buf.c
         nes/nes.c
         nes/core.c
         nes/cartridge.c

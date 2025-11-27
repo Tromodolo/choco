@@ -26,6 +26,7 @@ struct Nes {
     struct APU* apu;
 
     uint64_t global_cycle_count;
+    uint64_t sample_cycle_count;
 
     PlayerInput player_1_input;
     uint8_t current_reading_button_value;
@@ -38,13 +39,16 @@ struct Nes {
 };
 
 constexpr float CPU_CLOCKS_PER_SECOND = 1789772.67f;
+constexpr float GLOBAL_CLOCKS_PER_SECOND = CPU_CLOCKS_PER_SECOND * 3;
 constexpr float CLOCKS_PER_SAMPLE = CPU_CLOCKS_PER_SECOND / AUDIO_SAMPLE_RATE;
 
 struct Nes* nes_init(const char* file_path);
 struct Nes* nes_init_from_buffer(const uint8_t* buffer, const long size);
-bool nes_tick_until_sample(struct Nes* nes, Color* frame_buffer, bool* is_new_frame);
-short nes_get_sample(struct Nes* nes);
 void nes_free(struct Nes* nes);
+
+uint16_t nes_num_clocks_for_sample_count(struct Nes* nes, uint16_t sample_count);
+void nes_tick(struct Nes* nes, Color* frame_buffer, bool* is_new_frame);
+void nes_get_samples(struct Nes* nes, short* buffer, uint16_t sample_count);
 
 void nes_read_inputs(struct Nes* nes);
 

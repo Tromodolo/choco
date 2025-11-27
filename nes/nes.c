@@ -24,6 +24,7 @@ struct Nes* nes_init(const char* file_path) {
     nes->player_1_input.value = 0;
 
     nes->global_cycle_count = 0;
+    nes->sample_cycle_count = 0;
 
     nes->has_new_sample = false;
     nes->audio_sample_out = 0;
@@ -44,17 +45,18 @@ struct Nes* nes_init_from_buffer(const uint8_t* buffer, const long size) {
     return nes;
 }
 
-inline bool nes_tick_until_sample(struct Nes* nes, Color* frame_buffer, bool* is_new_frame){
+inline void nes_tick(struct Nes* nes, Color* frame_buffer, bool* is_new_frame){
     nes->global_cycle_count++;
+    nes->sample_cycle_count++;
 
     ppu_tick(nes, nes->ppu, frame_buffer, is_new_frame);
 
     nes->has_new_sample = false;
     if (nes->global_cycle_count % 3 != 0)
-        return nes->has_new_sample;
+        return;
 
     nes_cpu_tick(nes);
-    apu_tick(nes->apu);
+    apu_tick(nes->apu, nes->sample_cycle_count);
 
     nes->cpu->dma_read_write_latch = !nes->cpu->dma_read_write_latch;
     if (nes->cpu->is_dma_active) {
@@ -73,23 +75,15 @@ inline bool nes_tick_until_sample(struct Nes* nes, Color* frame_buffer, bool* is
 
         nes->cpu->dma_just_started = false;
     }
-
-    // Extremely naive resampling that takes the average of all samples generated during the time leading up to a sample
-    nes->audio_sample_accumulator += apu_read_latest_sample(nes->apu);
-    if (nes->clocks_since_last_sample >= CLOCKS_PER_SAMPLE) {
-        nes->audio_sample_out = (short)((float)nes->audio_sample_accumulator / CLOCKS_PER_SAMPLE);
-        nes->clocks_since_last_sample -= CLOCKS_PER_SAMPLE;
-        nes->has_new_sample = true;
-
-        nes->audio_sample_accumulator = 0;
-    }
-    nes->clocks_since_last_sample += 1.0f;
-
-    return nes->has_new_sample;
 }
 
-inline short nes_get_sample(struct Nes* nes) {
-    return nes->audio_sample_out;
+uint16_t nes_num_clocks_for_sample_count(struct Nes* nes, uint16_t sample_count) {
+    return apu_num_clocks_for_sample_count(nes->apu, sample_count);
+}
+
+inline void nes_get_samples(struct Nes* nes, short* buffer, uint16_t sample_count) {
+    apu_read_samples(nes->apu, buffer, sample_count, nes->sample_cycle_count);
+    nes->sample_cycle_count = 0;
 }
 
 void nes_free(struct Nes* nes) {
