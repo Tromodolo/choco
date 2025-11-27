@@ -72,6 +72,10 @@ inline void update_triangle_timer_reset(struct Triangle* triangle) {
 }
 
 void triangle_step(struct Triangle* triangle) {
+    if (!triangle->enabled || triangle->length_counter == 0 || triangle->linear_counter == 0) {
+        return;
+    }
+
     if (triangle->timer == 0) {
         triangle->timer = triangle->timer_reset;
         triangle->step_cycle_idx--;
@@ -106,8 +110,7 @@ void triangle_step_linear_counter(struct Triangle* triangle) {
 
 short triangle_get_sample(const struct Triangle* triangle) {
     const short sample_step = triangle_cycle[triangle->step_cycle_idx];
-    if (!triangle->enabled || triangle->length_counter == 0 || triangle->linear_counter == 0 || sample_step == 0 ||
-        triangle->timer_reset < 2) {
+    if (!triangle->enabled || sample_step == 0) {
         return 0;
     }
 
