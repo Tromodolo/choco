@@ -6,12 +6,11 @@
 
 #include <stdlib.h>
 
-#include "apu.h"
 #include "../nes.h"
 
 void update_sample(struct DMC* dmc);
 
-const uint8_t sample_timer_rates[] = {
+const uint16_t sample_timer_rates[] = {
     428, 380, 340, 320, 286, 254, 226, 214,
     190, 160, 142, 128, 106,  84,  72,  54
 };
@@ -22,6 +21,7 @@ struct DMC* dmc_init() {
     dmc->enabled = false;
 
     dmc->irq_enabled = false;
+    dmc->irq_pending = false;
     dmc->sample_loop = false;
 
     dmc->dmc_dma_active = false;
@@ -72,12 +72,14 @@ void dmc_set_enabled(struct DMC* dmc, bool enabled) {
     } else {
         dmc->pending_mute = true;
     }
+
+    dmc->irq_pending = false;
 }
 
 void dmc_write_flags_and_rate(struct DMC* dmc, uint8_t val) {
-    const bool irq_enabled = (val & 0b10000000) >> 7;
-    if (!irq_enabled)
-        dmc->irq_enabled = false;
+    dmc->irq_enabled = (val & 0b10000000) >> 7;
+    if (!dmc->irq_enabled)
+        dmc->irq_pending = false;
 
     dmc->sample_loop = (val & 0b01000000) >> 6;
     dmc->timer_reset = sample_timer_rates[val & 0b1111];
@@ -110,9 +112,13 @@ void dmc_fetch_new_sample(struct Nes* nes, struct DMC* dmc) {
 
         dmc->sample_length_current--;
 
-        if (dmc->sample_length_current == 0 && dmc->sample_loop) {
-            dmc->sample_address_current = dmc->sample_address;
-            dmc->sample_length_current = dmc->sample_length;
+        if (dmc->sample_length_current == 0) {
+            if (dmc->sample_loop) {
+                dmc->sample_address_current = dmc->sample_address;
+                dmc->sample_length_current = dmc->sample_length;
+            } else if (dmc->irq_enabled) {
+                dmc->irq_pending = true;
+            }
         }
 
         if (dmc->pending_mute) {

@@ -64,13 +64,13 @@ void apu_free(struct APU* apu) {
     free(apu);
 }
 
-uint8_t apu_read(const struct APU* apu, const uint16_t addr) {
+uint8_t apu_read(struct APU* apu, const uint16_t addr) {
     if (addr != 0x4015) {
         return 0;
     }
 
-    return
-        apu->dmc_interrupt << 7 |
+    const uint8_t val =
+        apu->dmc->irq_pending << 7 |
         apu->frame_interrupt << 6 |
         0 << 6 | // Just here for clarity tbh
         apu->dmc->enabled << 4 |
@@ -78,6 +78,10 @@ uint8_t apu_read(const struct APU* apu, const uint16_t addr) {
         apu->triangle->enabled << 2 |
         apu->pulse_two->enabled << 1 |
         apu->pulse_one->enabled << 0;
+
+    apu->frame_interrupt = false;
+
+    return val;
 }
 
 void apu_write(struct APU* apu, const uint16_t addr, const uint8_t val) {
@@ -191,7 +195,8 @@ inline void do_frame_counter(struct APU* apu) {
         case 14915: // 4-Step 0-frame
             if (!apu->is_five_step) {
                 apu->frame_counter = 0;
-                // TODO: Handle frame interrupt
+                if (!apu->irq_inhibit)
+                    apu->frame_interrupt = true;
             }
             break;
         case 18640: // 5-Step final envelopes, triangle, length, sweep
@@ -203,7 +208,8 @@ inline void do_frame_counter(struct APU* apu) {
         case 18641: // 5-step 0-frame
             if (apu->is_five_step) {
                 apu->frame_counter = 0;
-                // TODO: Handle frame interrupt
+                if (!apu->irq_inhibit)
+                    apu->frame_interrupt = true;
             }
             break;
         default: break;
@@ -245,6 +251,10 @@ void apu_tick(struct APU* apu, uint64_t global_cycle_count) {
     apu->do_tick = !apu->do_tick;
 
     apu_update_samples(apu, global_cycle_count);
+}
+
+bool apu_get_irq_pending(struct APU* apu) {
+    return apu->frame_interrupt | apu->dmc->irq_pending;
 }
 
 void apu_update_samples(struct APU* apu, uint64_t cycle_count) {

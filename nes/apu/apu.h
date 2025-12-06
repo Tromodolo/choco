@@ -60,7 +60,6 @@ struct APU {
     bool is_five_step;
     bool irq_inhibit;
 
-    bool dmc_interrupt;
     bool frame_interrupt;
 
     blip_t* blip_pulse;
@@ -70,10 +69,12 @@ struct APU {
 struct APU* apu_init(struct Nes* nes);
 void apu_free(struct APU* apu);
 
-uint8_t apu_read(const struct APU* apu, const uint16_t addr);
+uint8_t apu_read(struct APU* apu, const uint16_t addr);
 void apu_write(struct APU* apu, uint16_t addr, uint8_t val);
 
 void apu_tick(struct APU* apu, uint64_t global_cycle_count);
+
+bool apu_get_irq_pending(struct APU* apu);
 
 uint16_t apu_num_clocks_for_sample_count(struct APU* apu, uint16_t sample_count);
 void apu_read_samples(struct APU* apu, short* buffer, uint16_t sample_count, uint64_t cycle_count);

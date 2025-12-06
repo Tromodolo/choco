@@ -7,6 +7,7 @@ struct DMC {
     bool enabled;
 
     bool irq_enabled;
+    bool irq_pending;
     bool sample_loop;
 
     bool dmc_dma_active;
