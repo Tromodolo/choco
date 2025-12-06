@@ -32,6 +32,8 @@ struct Nes* nes_init(const char* file_path) {
 
     nes->audio_sample_accumulator = 0;
 
+    nes->realign_dma = false;
+
     return nes;
 }
 
@@ -59,7 +61,7 @@ inline void nes_tick(struct Nes* nes, Color* frame_buffer, bool* is_new_frame){
     apu_tick(nes->apu, nes->sample_cycle_count);
 
     nes->cpu->dma_read_write_latch = !nes->cpu->dma_read_write_latch;
-    if (nes->cpu->is_dma_active) {
+    if (nes->cpu->is_dma_active && !nes->realign_dma) {
         nes->cpu->ready = false;
 
         if (nes->cpu->dma_read_write_latch) { // Read
@@ -70,10 +72,35 @@ inline void nes_tick(struct Nes* nes, Color* frame_buffer, bool* is_new_frame){
 
             // After wrapping around
             nes->cpu->is_dma_active = nes->cpu->dma_addr != 0;
-            nes->cpu->ready = !nes->cpu->is_dma_active;
         }
 
         nes->cpu->dma_just_started = false;
+    }
+
+    nes->realign_dma = false;
+    if (nes->apu->dmc->dmc_dma_timer > 0) {
+        nes->cpu->ready = false;
+
+        // If dmc dma and normal dma happen on the same tick, the dmc dma wins out, so the normal dma has to be realigned
+        if (nes->apu->dmc->dmc_dma_timer == 1) {
+            nes->realign_dma = true;
+        }
+
+        // If the cpu is still doing stuff (multi-cycle-operation), then the dmc-dma cant start yet
+        if (nes->cpu->waiting_cycles > 0) {
+            nes->apu->dmc->dmc_dma_timer += 2;
+        }
+
+        nes->apu->dmc->dmc_dma_timer--;
+        if (nes->apu->dmc->dmc_dma_timer == 0) {
+            dmc_fetch_new_sample(nes, nes->apu->dmc);
+            nes->apu->dmc->dmc_dma_active = false;
+            nes->apu->dmc->dmc_dma_timer = -1;
+        }
+    }
+
+    if (!nes->cpu->ready && !nes->apu->dmc->dmc_dma_active && !nes->cpu->is_dma_active) {
+        nes->cpu->ready = true;
     }
 }
 
@@ -172,6 +199,9 @@ inline uint8_t read_hw_register(struct Nes* nes, uint16_t addr, bool* is_hw_regi
             const uint8_t value = nes->current_reading_button_value & 1;
             nes->current_reading_button_value >>= 1;
             return value;
+        case 0x4015: // APU Status
+            *is_hw_register = true;
+            return apu_read(nes->apu, addr);
         case 0x2000: // CTRL
         case 0x2001: // MASK
         case 0x2005: // SCROLL
@@ -191,7 +221,6 @@ inline uint8_t read_hw_register(struct Nes* nes, uint16_t addr, bool* is_hw_regi
         case 0x4011: // APU
         case 0x4012: // APU
         case 0x4013: // APU
-        case 0x4015: // APU
         case 0x400A: // APU
         case 0x400B: // APU
         case 0x400C: // APU
@@ -268,16 +297,16 @@ inline void write_hw_register(struct Nes* nes, uint16_t addr, const uint8_t val,
         case 0x4006: // APU
         case 0x4007: // APU
         case 0x4008: // APU
-        case 0x4010: // APU
-        case 0x4011: // APU
-        case 0x4012: // APU
-        case 0x4013: // APU
-        case 0x4015: // APU
         case 0x400A: // APU
         case 0x400B: // APU
         case 0x400C: // APU
         case 0x400E: // APU
         case 0x400F: // APU
+        case 0x4010: // APU
+        case 0x4011: // APU
+        case 0x4012: // APU
+        case 0x4013: // APU
+        case 0x4015: // APU
         case 0x4017: // APU
             apu_write(nes->apu, addr, val);
             *is_hw_register = true;

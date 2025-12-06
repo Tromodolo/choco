@@ -35,6 +35,7 @@ struct APU* apu_init(struct Nes* nes) {
     apu->pulse_two = pulse_init(false);
     apu->triangle = triangle_init();
     apu->noise = noise_init();
+    apu->dmc = dmc_init();
 
     apu->frame_counter = 0;
     apu->do_tick = true;
@@ -59,7 +60,24 @@ void apu_free(struct APU* apu) {
     pulse_free(apu->pulse_two);
     triangle_free(apu->triangle);
     noise_free(apu->noise);
+    dmc_free(apu->dmc);
     free(apu);
+}
+
+uint8_t apu_read(const struct APU* apu, const uint16_t addr) {
+    if (addr != 0x4015) {
+        return 0;
+    }
+
+    return
+        apu->dmc_interrupt << 7 |
+        apu->frame_interrupt << 6 |
+        0 << 6 | // Just here for clarity tbh
+        apu->dmc->enabled << 4 |
+        apu->noise->enabled << 3 |
+        apu->triangle->enabled << 2 |
+        apu->pulse_two->enabled << 1 |
+        apu->pulse_one->enabled << 0;
 }
 
 void apu_write(struct APU* apu, const uint16_t addr, const uint8_t val) {
@@ -106,11 +124,26 @@ void apu_write(struct APU* apu, const uint16_t addr, const uint8_t val) {
         case 0x400F:
             noise_write_length(apu->noise, val);
             break;
+        case 0x4010:
+            dmc_write_flags_and_rate(apu->dmc, val);
+            break;
+        case 0x4011:
+            dmc_write_direct_load(apu->dmc, val);
+            break;
+        case 0x4012:
+            dmc_write_sample_address(apu->dmc, val);
+            break;
+        case 0x4013:
+            dmc_write_sample_length(apu->dmc, val);
+            break;
         case 0x4015:
             apu->pulse_one->enabled = val & 0b1;
             apu->pulse_two->enabled = (val & 0b10) >> 1;
             apu->triangle->enabled = (val & 0b100) >> 2;
             apu->noise->enabled = (val & 0b1000) >> 3;
+
+            const bool dmc_enabled = (val & 0b1000) >> 4;
+            dmc_set_enabled(apu->dmc, dmc_enabled);
 
             if (!apu->pulse_one->enabled) {
                 apu->pulse_one->pending_mute = true;
@@ -131,6 +164,8 @@ void apu_write(struct APU* apu, const uint16_t addr, const uint8_t val) {
         case 0x4017:
             apu->is_five_step = (val & 0b10000000) >> 7;
             apu->irq_inhibit = (val & 0b01000000) >> 6;
+            break;
+        default:
             break;
     }
 }
@@ -205,6 +240,7 @@ void apu_tick(struct APU* apu, uint64_t global_cycle_count) {
     }
     triangle_step(apu->triangle);
     noise_step(apu->noise);
+    dmc_step(apu->dmc);
 
     apu->do_tick = !apu->do_tick;
 
@@ -216,16 +252,16 @@ void apu_update_samples(struct APU* apu, uint64_t cycle_count) {
     const short pulse2 = pulse_get_sample(apu->pulse_two);
     const short triangle = triangle_get_sample(apu->triangle);
     const short noise = noise_get_sample(apu->noise);
-    constexpr short dmc = 0;
+    const short dmc = dmc_get_sample(apu->dmc);
 
-    const short pulse_out = (short)(pulse1 + pulse2) * 500;
+    const short pulse_out = (short)(pulse1 + pulse2) * 625;
     const short pulse_diff = pulse_out - apu->last_pulse_sample;
     if (pulse_diff != 0) {
         apu->last_pulse_sample = pulse_out;
         blip_add_delta(apu->blip_pulse, cycle_count, pulse_diff);
     }
 
-    const short tnd_out = (short)(triangle + noise + dmc) * 500;
+    const short tnd_out = (short)(triangle + noise + dmc) * 375;
     const short tnd_diff = tnd_out - apu->last_tnd_sample;
     if (tnd_diff != 0) {
         apu->last_tnd_sample = tnd_out;

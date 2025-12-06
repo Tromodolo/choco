@@ -36,6 +36,8 @@ struct Nes {
     bool has_new_sample;
     short audio_sample_out;
     float clocks_since_last_sample;
+
+    bool realign_dma;
 };
 
 constexpr float CPU_CLOCKS_PER_SECOND = 1789772.67f;
