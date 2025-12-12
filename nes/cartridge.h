@@ -12,7 +12,7 @@ constexpr uint16_t PPU_MIRRORS_END = 0x3fff;
 //
 enum Mapper {
     Mapper_NRom = 0,
-
+    Mapper_MMC1 = 1,
     Mapper_UxRom = 2,
     Mapper_CNRom = 3,
 };
@@ -21,8 +21,8 @@ enum Mirroring {
     Mirroring_Horizontal = 0,
     Mirroring_Vertical = 1,
     Mirroring_FourScreen = 2,
-    // Mirroring_OneScreenLower = 3,
-    // Mirroring_OneScreenUpper = 4
+    Mirroring_OneScreenLower = 3,
+    Mirroring_OneScreenUpper = 4
 };
 
 struct Cartridge {
@@ -35,6 +35,8 @@ struct Cartridge {
     enum Mirroring mirroring;
     enum Mapper mapper_type;
     void* mapper;
+
+    uint8_t* work_ram;
 };
 
 struct Cartridge* nes_cartridge_load_from_file(const char* file_path);

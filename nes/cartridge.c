@@ -30,6 +30,7 @@ constexpr int NES2_TMP = 0x07;
 constexpr int HEADER_SIZE = 0x10;
 constexpr int TRAINER_SIZE = 0x200;
 
+constexpr int WORK_RAM_SIZE = 2048;
 
 struct Cartridge* nes_cartridge_load_from_file(const char* file_path) {
 
@@ -113,6 +114,8 @@ struct Cartridge* nes_cartridge_load_from_buffer(const uint8_t* buffer, const lo
     cartridge->prg_ram = malloc(sizeof(uint8_t) * prg_ram_size);
     cartridge->chr_rom = malloc(sizeof(uint8_t) * chr_rom_size);
 
+    cartridge->work_ram = calloc(WORK_RAM_SIZE, sizeof(uint8_t));
+
     int prg_rom_start = HEADER_SIZE;
     if (skip_trainer)
         prg_rom_start += TRAINER_SIZE;
@@ -132,6 +135,7 @@ struct Cartridge* nes_cartridge_load_from_buffer(const uint8_t* buffer, const lo
 void nes_cartridge_free(struct Cartridge* cartridge) {
     mapper_free(cartridge);
 
+    free(cartridge->work_ram);
     free(cartridge->prg_rom);
     free(cartridge->prg_ram);
     free(cartridge->chr_rom);
@@ -150,7 +154,7 @@ inline uint8_t nes_cartridge_read_char(const struct Cartridge* cartridge, uint16
     }
 
     if (addr <= RAM_MIRRORS_END) {
-        return cartridge->prg_ram[addr & 0x7FF];
+        return cartridge->work_ram[addr & 0x7FF];
     } else if (addr >= PRG_ROM_START && addr <= PRG_ROM_END) {
         addr -= PRG_ROM_START;
         addr %= cartridge->prg_rom_size;
@@ -175,7 +179,7 @@ inline void nes_cartridge_write_char(const struct Cartridge* cartridge, uint16_t
         // if (addr == 0x02 || addr == 0x03)
         //     printf("%d: %02x\n", addr, val);
 
-        cartridge->prg_ram[addr & 0x7FF] = val;
+        cartridge->work_ram[addr & 0x7FF] = val;
     } else if (addr >= PRG_ROM_START && addr <= PRG_ROM_END) {
         addr -= PRG_ROM_START;
         addr %= cartridge->prg_rom_size;
