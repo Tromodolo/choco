@@ -64,7 +64,7 @@ inline void nes_tick(struct Nes* nes, Color* frame_buffer, bool* is_new_frame){
     apu_tick(nes->apu, nes->sample_cycle_count);
 
     nes->cpu->dma_read_write_latch = !nes->cpu->dma_read_write_latch;
-    if (nes->cpu->is_dma_active && !nes->realign_dma) {
+    if (nes->cpu->is_dma_active && nes->apu->dmc->dmc_dma_timer != 1 && !nes->realign_dma) {
         nes->cpu->ready = false;
 
         if (nes->cpu->dma_read_write_latch) { // Read
