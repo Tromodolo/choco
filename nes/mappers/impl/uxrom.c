@@ -13,12 +13,12 @@ struct UxRom {
     uint8_t* bank_two;
 };
 
-constexpr int BANK_SIZE = 0x4000;
+constexpr int PRG_BANK_SIZE = 0x4000;
 
 void uxrom_init(struct Cartridge* cartridge) {
     struct UxRom* uxrom = malloc(sizeof(struct UxRom));
 
-    const int last_bank_addr = cartridge->prg_rom_size - BANK_SIZE;
+    const int last_bank_addr = cartridge->prg_rom_size - PRG_BANK_SIZE;
 
     uxrom->current_bank = 0;
     uxrom->bank_one = &cartridge->prg_rom[0];
@@ -58,7 +58,7 @@ void uxrom_cpu_write(const struct Cartridge* cartridge, uint16_t addr, uint8_t v
         *is_mapped = true;
         uxrom->current_bank = val & 0b1111;
 
-        const int bank_pos = uxrom->current_bank * BANK_SIZE;
+        const int bank_pos = uxrom->current_bank * PRG_BANK_SIZE;
         uxrom->bank_one = &cartridge->prg_rom[bank_pos];
     }
 }

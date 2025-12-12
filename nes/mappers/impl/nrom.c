@@ -7,12 +7,12 @@
 
 #include <stdlib.h>
 
-struct UxRom {
+struct NROM {
     bool is_256;
 };
 
 void nrom_init(struct Cartridge* cartridge) {
-    struct UxRom* nrom = malloc(sizeof(struct UxRom));
+    struct NROM* nrom = malloc(sizeof(struct NROM));
 
     nrom->is_256 = cartridge->prg_rom_size > 0x4000;
 
@@ -27,7 +27,7 @@ void nrom_free(struct Cartridge* cartridge) {
 uint8_t nrom_cpu_read(const struct Cartridge* cartridge, uint16_t addr, bool* is_mapped) {
     *is_mapped = false;
 
-    const struct UxRom* nrom = cartridge->mapper;
+    const struct NROM* nrom = cartridge->mapper;
     if (addr >= 0x8000 && addr <= 0xFFFF) {
         addr -= 0x8000;
 
@@ -44,7 +44,7 @@ uint8_t nrom_cpu_read(const struct Cartridge* cartridge, uint16_t addr, bool* is
 void nrom_cpu_write(const struct Cartridge* cartridge, uint16_t addr, uint8_t val, bool* is_mapped) {
     *is_mapped = false;
 
-    const struct UxRom* nrom = cartridge->mapper;
+    const struct NROM* nrom = cartridge->mapper;
     if (addr >= 0x8000 && addr <= 0xFFFF) {
         addr -= 0x8000;
 

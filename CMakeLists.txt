@@ -29,7 +29,9 @@ add_executable(choco
         tests/json/cJSON.c
         nes/mappers/mapper.c
         nes/mappers/impl/nrom.c
-        nes/mappers/impl/uxrom.c)
+        nes/mappers/impl/uxrom.c
+        nes/mappers/impl/mmc1.c
+)
 
 target_link_libraries(choco raylib)
 

@@ -7,6 +7,7 @@
 
 #include "../cartridge.h"
 #include "palette.h"
+#include "../mappers/mapper.h"
 
 constexpr int OAM_SIZE = 0xFF;
 constexpr int PALETTE_SIZE = 0x20;
@@ -29,7 +30,7 @@ void load_bg_shifters(struct PPU* ppu);
 void load_bg_patterns(const struct Nes* nes, struct PPU* ppu);
 
 void evaluate_sprites_on_line(struct PPU* ppu);
-void load_sprite_patterns(const struct PPU* ppu);
+void load_sprite_patterns(const struct Nes* nes, const struct PPU* ppu);
 
 void render_current_dot(struct Nes* nes, struct PPU* ppu, Color* frame_buffer);
 
@@ -82,7 +83,6 @@ struct PPU* ppu_init(const struct Nes* nes) {
     ppu->control_register.value = 0;
     ppu->mask_register.value = 0;
     ppu->status_register.value = 0;
-    ppu->status_register.vblank = 1;
 
     return ppu;
 }
@@ -99,7 +99,7 @@ uint16_t mirror_vram_addr(const struct Nes* nes, const uint16_t addr) {
     const int mirroredAddr = addr & 0x2FFF;
     // Get absolute value within vram
     const uint16_t vector = mirroredAddr - 0x2000;
-    const enum Mirroring current_mirroring = nes->cartridge->mirroring;
+    const enum Mirroring current_mirroring = mapper_get_mirroring(nes->cartridge);
 
     switch (current_mirroring) {
         case Mirroring_Vertical:
@@ -128,6 +128,32 @@ uint16_t mirror_vram_addr(const struct Nes* nes, const uint16_t addr) {
             if (vector <= 0x0FFF)
                 return (vector & 0x03FF) + 0x400;
             break;
+        case Mirroring_OneScreenLower:
+            if (vector <= 0x03FF)
+                return vector & 0x03FF;
+
+            if (vector <= 0x07FF)
+                return vector & 0x03FF;
+
+            if (vector <= 0x0BFF)
+                return vector & 0x03FF;
+
+            if (vector <= 0x0FFF)
+                return vector & 0x03FF;
+            break;
+        case Mirroring_OneScreenUpper:
+            if (vector <= 0x03FF)
+                return (vector & 0x03FF) + 0x400;
+
+            if (vector <= 0x07FF)
+                return (vector & 0x03FF) + 0x400;
+
+            if (vector <= 0x0BFF)
+                return (vector & 0x03FF) + 0x400;
+
+            if (vector <= 0x0FFF)
+                return (vector & 0x03FF) + 0x400;
+            break;
         case Mirroring_FourScreen:
         default:
             break;
@@ -135,7 +161,23 @@ uint16_t mirror_vram_addr(const struct Nes* nes, const uint16_t addr) {
     return vector;
 }
 
+uint8_t read_chr_rom(const struct Nes* nes, const struct PPU* ppu, const uint16_t addr) {
+    bool is_mapped = false;
+    const uint8_t mapper_value = mapper_ppu_read(nes->cartridge, addr, &is_mapped);
+    if (is_mapped) {
+        return mapper_value;
+    }
+
+    return ppu->chr_rom[addr];
+}
+
 uint8_t internal_read(const struct Nes* nes, struct PPU* ppu, const uint16_t addr) {
+    bool is_mapped = false;
+    const uint8_t mapper_value = mapper_ppu_read(nes->cartridge, addr, &is_mapped);
+    if (is_mapped) {
+        return mapper_value;
+    }
+
     if (addr <= 0x1FFF) {
         const uint8_t value = ppu->read_buffer;
         ppu->read_buffer = ppu->chr_rom[addr];
@@ -157,6 +199,12 @@ uint8_t internal_read(const struct Nes* nes, struct PPU* ppu, const uint16_t add
 }
 
 void internal_write(const struct Nes* nes, const struct PPU* ppu, const uint16_t addr, const uint8_t val) {
+    bool is_mapped = false;
+    mapper_ppu_write(nes->cartridge, addr, val, &is_mapped);
+    if (is_mapped) {
+        return;
+    }
+
     if (addr <= 0x1FFF) {
         ppu->chr_rom[addr] = val;
         return;
@@ -253,7 +301,7 @@ bool ppu_tick(struct Nes* nes, struct PPU* ppu, Color* frame_buffer, bool* is_ne
 
         // Loading sprite pattern depending on sprites evaluated
         if (ppu->dots_drawn == 340) {
-            load_sprite_patterns(ppu);
+            load_sprite_patterns(nes, ppu);
         }
     }
 
@@ -315,7 +363,7 @@ uint8_t ppu_get_oam_data(const struct Nes* nes, const struct PPU* ppu) {
 }
 uint8_t ppu_get_data(const struct Nes* nes, struct PPU* ppu) {
     const uint16_t addr = ppu->loopy_value.value;
-    ppu->loopy_value.value = ppu->loopy_value.value + get_increment(ppu);
+    ppu->loopy_value.value += get_increment(ppu);
     return internal_read(nes, ppu, addr);
 }
 
@@ -446,11 +494,11 @@ inline void load_bg_patterns(const struct Nes* nes, struct PPU* ppu) {
             break;
         case 4:
             const int lsb_addr = get_background_pattern_address(ppu) + (ppu->bg_next_tile_id * 16) + ppu->loopy_value.fine_y;
-            ppu->bg_next_tile_lsb = ppu->chr_rom[lsb_addr];
+            ppu->bg_next_tile_lsb = read_chr_rom(nes, ppu, lsb_addr);
             break;
         case 6:
             const int msb_addr = get_background_pattern_address(ppu) + (ppu->bg_next_tile_id * 16) + ppu->loopy_value.fine_y + 8;
-            ppu->bg_next_tile_msb = ppu->chr_rom[msb_addr];
+            ppu->bg_next_tile_msb = read_chr_rom(nes, ppu, msb_addr);
             break;
         case 7:
             increment_scroll_x(ppu);
@@ -507,7 +555,7 @@ inline void evaluate_sprites_on_line(struct PPU* ppu) {
     }
 }
 
-inline void load_sprite_patterns(const struct PPU* ppu) {
+inline void load_sprite_patterns(const struct Nes* nes, const struct PPU* ppu) {
     int sprite_index = 0;
     for (int i = 0; i < MAX_SPRITE_COUNT; ++i) {
         const struct SpriteEntry* sprite = &ppu->evaluated_sprites[i];
@@ -552,8 +600,8 @@ inline void load_sprite_patterns(const struct PPU* ppu) {
         }
 
         const uint16_t pattern_addr_hi = pattern_addr_lo + 8;
-        uint8_t pattern_bits_lo = ppu->chr_rom[pattern_addr_lo];
-        uint8_t pattern_bits_hi = ppu->chr_rom[pattern_addr_hi];
+        uint8_t pattern_bits_lo = read_chr_rom(nes, ppu, pattern_addr_lo);
+        uint8_t pattern_bits_hi = read_chr_rom(nes, ppu, pattern_addr_hi);
 
         if (flip_horizontal) {
             // https://stackoverflow.com/a/2602885

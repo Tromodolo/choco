@@ -9,6 +9,7 @@
 #include "cpu/cpu.h"
 #include "ppu/ppu.h"
 #include "apu/apu.h"
+#include "mappers/mapper.h"
 
 uint8_t read_hw_register(struct Nes* nes, uint16_t addr, bool* is_hw_register);
 void write_hw_register(struct Nes* nes, uint16_t addr, const uint8_t val, bool* is_hw_register);
@@ -52,6 +53,8 @@ inline void nes_tick(struct Nes* nes, Color* frame_buffer, bool* is_new_frame){
     nes->sample_cycle_count++;
 
     ppu_tick(nes, nes->ppu, frame_buffer, is_new_frame);
+
+    mapper_set_pc(nes->cartridge, nes->cpu->pc);
 
     nes->has_new_sample = false;
     if (nes->global_cycle_count % 3 != 0)
