@@ -14,6 +14,7 @@ constexpr int CHR_BANK_SIZE = 0x1000;
 void update_prg_banks(const struct Cartridge* cartridge, uint8_t val);
 void update_chr_banks(const struct Cartridge* cartridge);
 void set_control(const struct Cartridge* cartridge, uint8_t val);
+void persist_save_file(const struct Cartridge* cartridge, uint32_t updated_pos);
 
 struct Mmc1 {
     bool has_prg_ram;
@@ -44,6 +45,8 @@ struct Mmc1 {
     uint8_t last_control;
 
     enum Mirroring current_mirroring;
+
+    FILE* save_file;
 };
 
 void mmc1_init(struct Cartridge* cartridge) {
@@ -77,11 +80,29 @@ void mmc1_init(struct Cartridge* cartridge) {
 
     mmc1->chr_rom_bank_0 = &cartridge->chr_rom[mmc1->chr_rom_bank_idx_0 * CHR_BANK_SIZE];
     mmc1->chr_rom_bank_1 = &cartridge->chr_rom[mmc1->chr_rom_bank_idx_1 * CHR_BANK_SIZE];
+
+    mmc1->save_file = fopen("test.sav", "r+");
+    fseek(mmc1->save_file, 0, SEEK_END);
+    const long file_size = ftell(mmc1->save_file);
+    fseek(mmc1->save_file, 0, SEEK_SET);
+
+    for(int i = 0; i < file_size; i++) {
+        fread(cartridge->prg_ram + i, 1, 1, mmc1->save_file);
+    }
 }
 
 void mmc1_free(struct Cartridge* cartridge) {
+    const struct Mmc1* mmc1 = cartridge->mapper;
+    fflush(mmc1->save_file);
+    fclose(mmc1->save_file);
     free(cartridge->mapper);
     cartridge->mapper = nullptr;
+}
+
+void persist_save_file(const struct Cartridge* cartridge, const uint32_t updated_pos) {
+    const struct Mmc1* mmc1 = cartridge->mapper;
+    fseek(mmc1->save_file, updated_pos, SEEK_SET);
+    fwrite(&cartridge->prg_ram[updated_pos], 1, 1, mmc1->save_file);
 }
 
 uint8_t mmc1_cpu_read(const struct Cartridge* cartridge, uint16_t addr, bool* is_mapped) {
@@ -112,6 +133,7 @@ void mmc1_cpu_write(const struct Cartridge* cartridge, uint16_t addr, uint8_t va
         *is_mapped = true;
         addr -= 0x6000;
         cartridge->prg_ram[addr] = val;
+        persist_save_file(cartridge, addr);
     } else if (addr >= 0x8000) {
         if (mmc1->last_pc == mmc1->current_pc) {
             return;
