@@ -4,6 +4,8 @@
 
 #include "cartridge.h"
 
+#include <time.h>
+
 #include "mappers/mapper.h"
 
 constexpr int NES_TAG_1 = 0x00;
@@ -114,7 +116,12 @@ struct Cartridge* nes_cartridge_load_from_buffer(const uint8_t* buffer, const lo
     cartridge->prg_ram = malloc(sizeof(uint8_t) * prg_ram_size);
     cartridge->chr_rom = malloc(sizeof(uint8_t) * chr_rom_size);
 
-    cartridge->work_ram = calloc(WORK_RAM_SIZE, sizeof(uint8_t));
+    cartridge->work_ram = malloc(sizeof(uint8_t) * WORK_RAM_SIZE);
+
+    srand(time(nullptr));
+    for (int i = 0; i < WORK_RAM_SIZE; ++i) {
+        cartridge->work_ram[i] = rand() % 0xFF;
+    }
 
     int prg_rom_start = HEADER_SIZE;
     if (skip_trainer)
