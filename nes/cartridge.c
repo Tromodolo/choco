@@ -123,6 +123,10 @@ struct Cartridge* nes_cartridge_load_from_buffer(const uint8_t* buffer, const lo
         cartridge->work_ram[i] = rand() % 0xFF;
     }
 
+    for (int i = 0; i < prg_ram_size; ++i) {
+        cartridge->prg_ram[i] = rand() % 0xFF;
+    }
+
     int prg_rom_start = HEADER_SIZE;
     if (skip_trainer)
         prg_rom_start += TRAINER_SIZE;
