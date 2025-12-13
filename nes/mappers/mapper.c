@@ -124,7 +124,7 @@ void mapper_ppu_write(const struct Cartridge* cartridge, uint16_t addr, uint8_t 
     switch (cartridge->mapper_type) {
         case Mapper_MMC1:
             mmc1_ppu_write(cartridge, addr, val, is_mapped);
-            break;
+            return;
         default:
             break;
     }

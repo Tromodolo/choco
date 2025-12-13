@@ -65,8 +65,6 @@ inline void nes_tick(struct Nes* nes, Color* frame_buffer, bool* is_new_frame){
 
     nes->cpu->dma_read_write_latch = !nes->cpu->dma_read_write_latch;
     if (nes->cpu->is_dma_active && nes->apu->dmc->dmc_dma_timer != 1 && !nes->realign_dma) {
-        nes->cpu->ready = false;
-
         if (nes->cpu->dma_read_write_latch) { // Read
             nes->cpu->dma_value = nes_read_char(nes, nes->cpu->dma_page << 8 | nes->cpu->dma_addr);
         } else if (!nes->cpu->dma_just_started) { // Write
@@ -102,7 +100,7 @@ inline void nes_tick(struct Nes* nes, Color* frame_buffer, bool* is_new_frame){
         }
     }
 
-    if (!nes->cpu->ready && !nes->apu->dmc->dmc_dma_active && !nes->cpu->is_dma_active) {
+    if (!nes->cpu->ready && !nes->apu->dmc->dmc_dma_active) {
         nes->cpu->ready = true;
     }
 }
@@ -168,15 +166,15 @@ inline void nes_write_char(struct Nes* nes, const uint16_t addr, const uint8_t v
 }
 
 inline uint16_t nes_read_short(struct Nes* nes, uint16_t addr) {
-    const uint8_t lo = nes_cartridge_read_char(nes->cartridge, addr);
-    const uint8_t hi = nes_cartridge_read_char(nes->cartridge, ++addr);
+    const uint8_t lo = nes_read_char(nes, addr);
+    const uint8_t hi = nes_read_char(nes, ++addr);
     return hi << 8 | lo;
 }
 inline void nes_write_short(struct Nes* nes, uint16_t addr, const uint16_t val) {
     const uint8_t lo = val & 0xFF;
     const uint8_t hi = val >> 8;
-    nes_cartridge_write_char(nes->cartridge, addr, lo);
-    nes_cartridge_write_char(nes->cartridge, ++addr, hi);
+    nes_write_char(nes, addr, lo);
+    nes_write_char(nes, ++addr, hi);
 }
 
 inline uint8_t read_hw_register(struct Nes* nes, uint16_t addr, bool* is_hw_register){

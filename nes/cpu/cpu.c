@@ -66,8 +66,9 @@ void nes_cpu_tick(struct Nes* nes) {
         nes_cpu_handle_instruction(nes, nes->cpu, opcode);
 
         nes->cpu->total_cycles += nes->cpu->waiting_cycles;
+    } else {
+        nes->cpu->waiting_cycles--;
     }
-    nes->cpu->waiting_cycles--;
 }
 
 void nes_cpu_free(struct CPU* cpu) {

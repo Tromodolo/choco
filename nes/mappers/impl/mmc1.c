@@ -18,6 +18,8 @@ void set_control(const struct Cartridge* cartridge, uint8_t val);
 struct Mmc1 {
     bool has_prg_ram;
 
+    uint8_t prg_rom_bank_raw;
+
     uint8_t prg_rom_bank_idx_0;
     uint8_t prg_rom_bank_idx_1;
 
@@ -86,7 +88,7 @@ uint8_t mmc1_cpu_read(const struct Cartridge* cartridge, uint16_t addr, bool* is
     *is_mapped = false;
 
     const struct Mmc1* mmc1 = cartridge->mapper;
-    if (addr >= 0x6000 && addr < 0x8000) {
+    if (addr >= 0x6000 && addr < 0x8000 && mmc1->has_prg_ram) {
         *is_mapped = true;
         addr -= 0x6000;
         return cartridge->prg_ram[addr];
@@ -106,7 +108,7 @@ void mmc1_cpu_write(const struct Cartridge* cartridge, uint16_t addr, uint8_t va
     *is_mapped = false;
 
     struct Mmc1* mmc1 = cartridge->mapper;
-    if (addr >= 0x6000 && addr < 0x8000) {
+    if (addr >= 0x6000 && addr < 0x8000 && mmc1->has_prg_ram) {
         *is_mapped = true;
         addr -= 0x6000;
         cartridge->prg_ram[addr] = val;
@@ -196,7 +198,8 @@ enum Mirroring mmc1_get_mirroring(const struct Cartridge* cartridge) {
 void update_prg_banks(const struct Cartridge* cartridge, uint8_t val) {
     struct Mmc1* mmc1 = cartridge->mapper;
 
-    mmc1->has_prg_ram = (val & 0b00010000) >> 4;
+    mmc1->has_prg_ram = !((val & 0b00010000) >> 4);
+    mmc1->prg_rom_bank_raw = val;
 
     val &= 0b00011111;
     switch (mmc1->prg_mode) {
@@ -261,5 +264,5 @@ void set_control(const struct Cartridge* cartridge, uint8_t val) {
     mmc1->chr_mode = (val & 0b00010000) >> 4;
 
     update_chr_banks(cartridge);
-    update_prg_banks(cartridge, mmc1->prg_rom_bank_idx_0);
+    update_prg_banks(cartridge, mmc1->prg_rom_bank_raw);
 }

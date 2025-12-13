@@ -145,7 +145,7 @@ inline uint8_t get_address(struct Nes* nes, struct CPU* cpu, const enum Addressi
             const unsigned deref_base = (hi << 8 | lo);
             const uint16_t deref = deref_base + cpu->y;
 
-            if (can_page_cross && is_page_cross(deref, deref_base))
+            if (can_page_cross && is_page_cross(deref_base, deref))
                 cpu->waiting_cycles++;
 
             return nes_read_char(nes, deref);

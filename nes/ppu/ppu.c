@@ -342,7 +342,7 @@ bool ppu_tick(struct Nes* nes, struct PPU* ppu, Color* frame_buffer, bool* is_ne
         }
     }
 
-    return is_new_frame;
+    return *is_new_frame;
 }
 
 bool ppu_get_nmi_interrupt(const struct Nes* nes, struct PPU* ppu) {
