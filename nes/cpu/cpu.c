@@ -48,10 +48,14 @@ struct CPU* nes_cpu_init(struct Nes* nes) {
 }
 
 void nes_cpu_tick(struct Nes* nes) {
+    if (nes->cpu->waiting_cycles > 0){
+        nes->cpu->waiting_cycles--;
+    }
+
     if (!nes->cpu->is_stopped && nes->cpu->waiting_cycles == 0) {
 #ifndef TESTS
         // if (nes->cpu->total_cycles <= 26554)
-             // write_current_status_log(nes);
+             write_current_status_log(nes);
 #endif
 
         if (nes->cpu->pc == 0xF503) {
@@ -66,8 +70,6 @@ void nes_cpu_tick(struct Nes* nes) {
         nes_cpu_handle_instruction(nes, nes->cpu, opcode);
 
         nes->cpu->total_cycles += nes->cpu->waiting_cycles;
-    } else {
-        nes->cpu->waiting_cycles--;
     }
 }
 
