@@ -127,4 +127,6 @@ void ppu_write_oam_data(const struct Nes* nes, struct PPU* ppu, uint8_t value);
 void ppu_write_mask(const struct Nes* nes, struct PPU* ppu, uint8_t value);
 void ppu_write_data(const struct Nes* nes, struct PPU* ppu, uint8_t value);
 
+void ppu_get_nametables(const struct Nes* nes, struct PPU* ppu, Color* buffer);
+
 #endif //PPU_H

@@ -322,82 +322,124 @@ bool nes_is_nmi(const struct Nes* nes) {
     return ppu_get_nmi_interrupt(nes, nes->ppu);
 }
 
+//
+// Debug stuff
+//
+struct DebugImage {
+    Texture2D texture;
+    Color* buffer;
+    bool isInit;
+};
 
-// local variables just for logging debug info
-char* cpu_reg = nullptr;
-char* ppu_reg_1 = nullptr;
-char* ppu_reg_2 = nullptr;
-char* ppu_reg_3 = nullptr;
+int draw_debug_value(const int x, const int y, const int line_height, const int font_size, const Color color, const char* label, const char* formatting, ...) {
+    char buffer[64];
+
+    va_list args;
+    va_start(args, formatting);
+    vsnprintf(buffer, sizeof(buffer), formatting, args);
+    va_end(args);
+
+    DrawText(label, x, y, font_size, color);
+    DrawText(buffer, x + 120, y, font_size, color);
+
+    return y + line_height;
+}
+
+void draw_debug_image(const int x, const int y, const int width, const int height, struct DebugImage* image) {
+    if (!image->isInit) {
+        const Image blank = GenImageColor(width, height, BLACK);
+        const Texture2D texture = LoadTextureFromImage(blank);
+        UnloadImage(blank);
+        image->texture = texture;
+        image->buffer = malloc(width * height * sizeof(Color));
+        image->isInit = true;
+    }
+
+    UpdateTexture(image->texture, image->buffer);
+
+    const Rectangle source = {0, 0, width, height};
+    const Rectangle dest = {x, y, width, height};
+    const Vector2 origin = {0, 0};
+
+    DrawTexturePro(
+        image->texture,
+        source,
+        dest,
+        origin,
+        0.0f,
+        WHITE
+    );
+}
+
+// local variables just for debug
+struct DebugImage nametable = { 0 };
 void nes_draw_debug_info(const struct Nes* nes) {
-    if (!cpu_reg) {
-        cpu_reg = malloc(sizeof(char) * 34);
-    }
-    if (!ppu_reg_1) {
-        ppu_reg_1 = malloc(sizeof(char) * 35);
-    }
-    if (!ppu_reg_2) {
-        ppu_reg_2 = malloc(sizeof(char) * 58);
-    }
-    if (!ppu_reg_3) {
-        ppu_reg_3 = malloc(sizeof(char) * 58);
-    }
+    constexpr int left_padding        = (SCREEN_WIDTH * 2) + 10;
+    constexpr int top_padding         = 10;
+    constexpr int header_x_pos        = left_padding + 15;
+    constexpr int value_x_pos         = header_x_pos + 15;
 
-    const int left_padding = (SCREEN_WIDTH * 2) + 10;
-    const int top_padding = 10;
+    constexpr int header_font_size    = 22;
+    constexpr int value_font_size     = 20;
+    constexpr int line_height         = 22;
 
-    const int header_padding = left_padding + 15;
-    const int subheader_padding = header_padding + 15;
+    int y = top_padding;
 
-    DrawText("Registers", left_padding, top_padding, 24, WHITE);
-    DrawText("CPU", header_padding, top_padding + 25, 22, WHITE);
+    DrawText("Registers", left_padding, y, 24, WHITE);
+    y += 30;
 
-    sprintf(
-        cpu_reg,
-        "PC: %04X A:%02X X:%02X Y:%02X P:%02X SP:%02X",
-        nes->cpu->pc,
-        nes->cpu->acc,
-        nes->cpu->x,
-        nes->cpu->y,
-        nes->cpu->p.value,
-        nes->cpu->sp
-    );
-    DrawText(cpu_reg, subheader_padding, top_padding + 50, 20, WHITE);
+    /* ================= CPU ================= */
 
-    DrawText("PPU", header_padding, top_padding + 75, 22, WHITE);
+    DrawText("CPU", header_x_pos, y, header_font_size, WHITE);
+    y += 30;
 
-    sprintf(
-        ppu_reg_1,
-        "X:%03d Y:%03d CTRL:%02X MASK:%02X STATUS:%02X",
-        nes->ppu->dots_drawn,
-        nes->ppu->current_scanline,
-        nes->ppu->control_register.value,
-        nes->ppu->mask_register.value,
-        nes->ppu->status_register.value
-    );
-    DrawText(ppu_reg_1, subheader_padding, top_padding + 100, 20, WHITE);
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "PC",  "%04X", nes->cpu->pc);
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "A",   "%02X", nes->cpu->acc);
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "X",   "%02X", nes->cpu->x);
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "Y",   "%02X", nes->cpu->y);
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "P",   "%02X", nes->cpu->p.value);
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "SP",  "%02X", nes->cpu->sp);
 
-    DrawText("Loopy", header_padding + 7, top_padding + 125, 22, WHITE);
-    sprintf(
-        ppu_reg_2,
-        "Coarse X:%02d Coarse Y:%02d Na_X:%d NT_Y:%d Fine Y:%d Fine X:%d",
-        nes->ppu->loopy_value.coarse_x,
-        nes->ppu->loopy_value.coarse_y,
-        nes->ppu->loopy_value.nametable_x,
-        nes->ppu->loopy_value.nametable_y,
-        nes->ppu->loopy_value.fine_y,
-        nes->ppu->scroll_fine_x
-    );
-    DrawText(ppu_reg_2, subheader_padding, top_padding + 150, 20, WHITE);
+    y += 15;
 
-    DrawText("Loopy TMP", header_padding + 7, top_padding + 175, 22, WHITE);
-    sprintf(
-        ppu_reg_3,
-        "Coarse X:%02d Coarse Y:%02d Na_X:%d NT_Y:%d Fine Y:%d",
-        nes->ppu->loopy_temp.coarse_x,
-        nes->ppu->loopy_temp.coarse_y,
-        nes->ppu->loopy_temp.nametable_x,
-        nes->ppu->loopy_temp.nametable_y,
-        nes->ppu->loopy_temp.fine_y
-    );
-    DrawText(ppu_reg_3, subheader_padding, top_padding + 200, 20, WHITE);
+    /* ================= PPU ================= */
+
+    DrawText("PPU", header_x_pos, y, header_font_size, WHITE);
+    y += 30;
+
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "Dots",     "%03d", nes->ppu->dots_drawn);
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "Scanline", "%03d", nes->ppu->current_scanline);
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "CTRL",     "%02X", nes->ppu->control_register.value);
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "MASK",     "%02X", nes->ppu->mask_register.value);
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "STATUS",   "%02X", nes->ppu->status_register.value);
+
+    y += 15;
+
+    /* ================= Loopy ================= */
+
+    DrawText("Loopy", header_x_pos, y, header_font_size, WHITE);
+    y += 30;
+
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "Coarse X", "%02d", nes->ppu->loopy_value.coarse_x);
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "Coarse Y", "%02d", nes->ppu->loopy_value.coarse_y);
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "N X",      "%d",  nes->ppu->loopy_value.nametable_x);
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "NT Y",     "%d",  nes->ppu->loopy_value.nametable_y);
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "Fine Y",   "%d",  nes->ppu->loopy_value.fine_y);
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "Fine X",   "%d",  nes->ppu->scroll_fine_x);
+
+    y += 15;
+
+    /* ================= Loopy TMP ================= */
+
+    DrawText("Loopy TMP", header_x_pos, y, header_font_size, WHITE);
+    y += 30;
+
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "Coarse X", "%02d", nes->ppu->loopy_temp.coarse_x);
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "Coarse Y", "%02d", nes->ppu->loopy_temp.coarse_y);
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "NT X",     "%d",  nes->ppu->loopy_temp.nametable_x);
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "NT Y",     "%d",  nes->ppu->loopy_temp.nametable_y);
+    y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "Fine Y",   "%d",  nes->ppu->loopy_temp.fine_y);
+
+    ppu_get_nametables(nes, nes->ppu, nametable.buffer);
+    draw_debug_image(768, 0, SCREEN_WIDTH * 2, SCREEN_HEIGHT * 2, &nametable);
 }

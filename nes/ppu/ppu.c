@@ -784,3 +784,102 @@ inline void reset_y_addr(struct PPU* ppu) {
         ppu->loopy_value.fine_y = ppu->loopy_temp.fine_y;
     }
 }
+
+uint8_t peek_addr_value(const struct Nes* nes, struct PPU* ppu, const uint16_t addr) {
+    bool is_mapped = false;
+    const uint8_t mapper_value = mapper_ppu_read(nes->cartridge, addr, &is_mapped);
+    if (is_mapped) {
+        return mapper_value;
+    }
+
+    if (addr <= 0x1FFF) {
+        return read_chr_rom(nes, ppu, addr);
+    }
+    if (addr <= 0x3EFF) {
+        return ppu->vram[mirror_vram_addr(nes, addr)];;
+    }
+    if (addr == 0x3f10 || addr == 0x3f14 || addr == 0x3f18 || addr == 0x3f1c) {
+        return ppu->palette[(addr - 0x3f00) & 0x0F];
+    }
+    if (addr <= 0x3fff) {
+        return ppu->palette[(addr - 0x3f00) & 0x1F];
+    }
+
+    assert(false);
+}
+
+uint8_t get_attribute_palette(const struct Nes* nes, struct PPU* ppu, const uint16_t nt_base, const int tile_x, const int tile_y) {
+    // Attribute table is 64 bytes (8x8), each byte covers 4x4 tiles, split into 2x2 tile quadrants.
+    const uint16_t attr_addr =
+        nt_base + 0x03C0 +
+        (uint16_t)((tile_y >> 2) * 8 + (tile_x >> 2));
+
+    const uint8_t attr = peek_addr_value(nes, ppu, attr_addr);
+
+    const int tile_quad_x = (tile_x >> 1) & 1;
+    const int tile_quad_y = (tile_y >> 1) & 1;
+    const int shift = (tile_quad_y * 2 + tile_quad_x) * 2;
+
+    return (attr >> shift) & 0x03;
+}
+
+void ppu_get_nametables(const struct Nes* nes, struct PPU* ppu, Color* buffer) {
+    if (buffer == nullptr) {
+        return;
+    }
+
+    constexpr int buffer_width = SCREEN_WIDTH * 2;
+    const uint16_t pattern_base = get_background_pattern_address(ppu);
+
+    for (int nametable = 0; nametable < 4; nametable++) {
+        constexpr uint16_t base_addresses[4] = { 0x2000, 0x2400, 0x2800, 0x2C00 };
+        const uint16_t base = base_addresses[nametable];
+
+        const int screen_x = (nametable & 0b01)
+            ? SCREEN_WIDTH
+            : 0;
+
+        const int screen_y = (nametable & 0b10)
+            ? SCREEN_HEIGHT
+            : 0;
+
+        // 32x30 tiles per nametable
+        for (int tile_y = 0; tile_y < 30; tile_y++) {
+            for (int tile_x = 0; tile_x < 32; tile_x++) {
+                const uint16_t tile_addr = base + tile_y * 32 + tile_x;
+                const uint8_t tile_id = peek_addr_value(nes, ppu, tile_addr);
+
+                const uint8_t palette = get_attribute_palette(nes, ppu, base, tile_x, tile_y);
+                const uint16_t tile_pattern = pattern_base + tile_id * 16;
+
+                for (int row = 0; row < 8; row++) {
+                    const uint8_t pixel_lo = peek_addr_value(nes, ppu, tile_pattern + row);
+                    const uint8_t pixel_hi = peek_addr_value(nes, ppu, tile_pattern + row + 8);
+
+                    for (int col = 0; col < 8; col++) {
+                        const int bit = 7 - col;
+
+                        const uint8_t p0 = (pixel_lo >> bit) & 1;
+                        const uint8_t p1 = (pixel_hi >> bit) & 1;
+                        const uint8_t pixel = (p1 << 1) | p0;
+
+                        uint8_t palette_idx;
+                        if (pixel == 0) {
+                            palette_idx = peek_addr_value(nes, ppu, 0x3F00) & 0x3F;
+                        } else {
+                            const uint16_t palette_addr = 0x3F00 + (palette << 2) + pixel;
+                            palette_idx = peek_addr_value(nes, ppu, palette_addr) & 0x3F;
+                        }
+
+                        const Color color = PALETTE[palette_idx];
+
+                        const int pixel_x = screen_x + tile_x * 8 + col;
+                        const int pixel_y = screen_y + tile_y * 8 + row;
+
+                        buffer[pixel_x + pixel_y * buffer_width] = color;
+                    }
+                }
+            }
+        }
+    }
+}
