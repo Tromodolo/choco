@@ -34,7 +34,7 @@ int main(void) {
     SetAudioStreamBufferSizeDefault(1024);
     const AudioStream stream = LoadAudioStream(AUDIO_SAMPLE_RATE, 16, 1);
 
-    core = get_core_for_file("/media/games/mm2.nes");
+    core = get_core_for_file("/media/games/ff.nes");
     // core = get_core_for_file("/media/games/dk.nes");
 
     SetAudioStreamCallback(stream, get_samples);
@@ -49,7 +49,7 @@ int main(void) {
         core_read_inputs(core);
 
         if (core->frame_buffer_changed) {
-            UpdateTexture(texture, core->frame_buffer);
+            UpdateTexture(texture, core->frame_buffers[!core->active_buffer]);
             core->frame_buffer_changed = false;
             framecount++;
 
@@ -77,6 +77,7 @@ int main(void) {
         EndDrawing();
     }
 
+    free(title);
     StopAudioStream(stream);
     core_free(core);
 

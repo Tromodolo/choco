@@ -5,7 +5,8 @@
 struct Core {
     int buffer_width;
     int buffer_height;
-    Color* frame_buffer;
+    Color** frame_buffers;
+    int active_buffer;
     bool frame_buffer_changed;
     void* emu;
     AudioCallback audio_callback;

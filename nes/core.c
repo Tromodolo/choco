@@ -10,11 +10,15 @@ inline struct Core* get_core_for_file(const char* file_path) {
     core->emu = nes_init(file_path);
     core->buffer_height = EFFECTIVE_SCREEN_HEIGHT;
     core->buffer_width = SCREEN_WIDTH;
-    core->frame_buffer = malloc(core->buffer_width * core->buffer_height * sizeof(Color));
+    core->frame_buffers = malloc(2 * sizeof(Color*));
+    core->frame_buffers[0] = malloc(core->buffer_width * core->buffer_height * sizeof(Color)),
+    core->frame_buffers[1] = malloc(core->buffer_width * core->buffer_height * sizeof(Color)),
     core->frame_buffer_changed = true;
+    core->active_buffer = 1;
 
     for (int i = 0; i < core->buffer_width * core->buffer_height; i++) {
-        core->frame_buffer[i] = DARKBLUE;
+        core->frame_buffers[0][i] = DARKBLUE;
+        core->frame_buffers[1][i] = DARKBLUE;
     }
 
     return core;
@@ -27,10 +31,11 @@ void core_audio_callback(struct Core* core, short* samples, const unsigned int s
     for (int i = 0; i < num_clocks_for_samples; ++i) {
         is_new_frame = false;
 
-        nes_tick(core->emu, core->frame_buffer, &is_new_frame);
+        nes_tick(core->emu, core->frame_buffers[core->active_buffer], &is_new_frame);
 
         if (is_new_frame) {
             core->frame_buffer_changed = true;
+            core->active_buffer = !core->active_buffer;
         }
     }
     nes_get_samples(core->emu, samples, sample_count);
