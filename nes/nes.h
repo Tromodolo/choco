@@ -62,4 +62,6 @@ void nes_write_short(struct Nes* nes, uint16_t addr, uint16_t val);
 
 bool nes_is_nmi(const struct Nes* nes);
 
+void nes_draw_debug_info(const struct Nes* nes);
+
 #endif //NES_H

@@ -17,5 +17,6 @@ void core_audio_callback(struct Core* core, short* samples, unsigned int sample_
 void core_clear_frame_buffer_changed(struct Core* core);
 void core_free(struct Core* core);
 void core_read_inputs(const struct Core* core);
+void core_draw_debug_info(const struct Core* core);
 
 #endif //CORE_H

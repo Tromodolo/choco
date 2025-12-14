@@ -49,6 +49,11 @@ inline void core_clear_frame_buffer_changed(struct Core* core) {
     core->frame_buffer_changed = false;
 }
 
+
+void core_draw_debug_info(const struct Core* core) {
+    nes_draw_debug_info(core->emu);
+}
+
 void core_free(struct Core* core) {
     nes_free(core->emu);
     free(core);

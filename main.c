@@ -6,8 +6,8 @@
 #include "nes/core.h"
 #include "tests/tests.h"
 
-constexpr int SCREEN_WIDTH = 800;
-constexpr int SCREEN_HEIGHT = 600;
+constexpr int SCREEN_WIDTH = 1280;
+constexpr int SCREEN_HEIGHT = 768;
 
 struct Core* core;
 int framecount = 0;
@@ -73,6 +73,8 @@ int main(void) {
                 0.0f,
                 WHITE
             );
+
+            core_draw_debug_info(core);
         }
         EndDrawing();
     }
