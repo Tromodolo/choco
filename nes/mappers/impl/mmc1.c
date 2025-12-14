@@ -82,6 +82,10 @@ void mmc1_init(struct Cartridge* cartridge) {
     mmc1->chr_rom_bank_1 = &cartridge->chr_rom[mmc1->chr_rom_bank_idx_1 * CHR_BANK_SIZE];
 
     mmc1->save_file = fopen("test.sav", "r+");
+    if (mmc1->save_file == nullptr) {
+        mmc1->save_file = fopen("test.sav", "w+");
+    }
+
     fseek(mmc1->save_file, 0, SEEK_END);
     const long file_size = ftell(mmc1->save_file);
     fseek(mmc1->save_file, 0, SEEK_SET);
