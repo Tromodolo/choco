@@ -6,7 +6,7 @@
 #define MMC1_H
 #include <stdint.h>
 
-void mmc1_init(struct Cartridge* cartridge);
+void mmc1_init(struct Cartridge* cartridge, const char* file_path);
 void mmc1_free(struct Cartridge* cartridge);
 
 uint8_t mmc1_cpu_read(const struct Cartridge* cartridge, uint16_t addr, bool* is_mapped);

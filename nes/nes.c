@@ -38,10 +38,10 @@ struct Nes* nes_init(const char* file_path) {
     return nes;
 }
 
-struct Nes* nes_init_from_buffer(const uint8_t* buffer, const long size) {
+struct Nes* nes_init_from_buffer(const uint8_t* buffer) {
     struct Nes* nes = malloc(sizeof(struct Nes));
 
-    nes->cartridge = nes_cartridge_load_from_buffer(buffer, size);
+    nes->cartridge = nes_cartridge_load_from_buffer(buffer, nullptr);
     nes->cpu =  nes_cpu_init(nes);
     nes->ppu = ppu_init(nes);
 

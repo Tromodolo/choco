@@ -45,7 +45,7 @@ constexpr float GLOBAL_CLOCKS_PER_SECOND = CPU_CLOCKS_PER_SECOND * 3;
 constexpr float CLOCKS_PER_SAMPLE = CPU_CLOCKS_PER_SECOND / AUDIO_SAMPLE_RATE;
 
 struct Nes* nes_init(const char* file_path);
-struct Nes* nes_init_from_buffer(const uint8_t* buffer, const long size);
+struct Nes* nes_init_from_buffer(const uint8_t* buffer);
 void nes_free(struct Nes* nes);
 
 uint16_t nes_num_clocks_for_sample_count(struct Nes* nes, uint16_t sample_count);

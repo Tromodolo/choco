@@ -6,7 +6,7 @@
 #define MAPPER_H
 #include <stdint.h>
 
-void mapper_init(struct Cartridge* cartridge);
+void mapper_init(struct Cartridge* cartridge, const char* file_path);
 void mapper_free(struct Cartridge* cartridge);
 
 enum Mirroring mapper_get_mirroring(struct Cartridge* cartridge);

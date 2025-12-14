@@ -314,7 +314,7 @@ void run_auto_tests() {
         int current_test_index = 0;
         const cJSON* child = json->child;
         while (child) {
-            struct Nes* nes = nes_init_from_buffer(rom, 0xFFFF);
+            struct Nes* nes = nes_init_from_buffer(rom);
 
             const cJSON* c_name = child->child;
             const cJSON* c_initial_values = c_name->next;

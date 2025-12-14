@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 constexpr int PRG_BANK_SIZE = 0x4000;
 constexpr int CHR_BANK_SIZE = 0x1000;
@@ -49,7 +50,7 @@ struct Mmc1 {
     FILE* save_file;
 };
 
-void mmc1_init(struct Cartridge* cartridge) {
+void mmc1_init(struct Cartridge* cartridge, const char* file_path) {
     struct Mmc1* mmc1 = malloc(sizeof(struct Mmc1));
 
     mmc1->has_prg_ram = cartridge->prg_ram_size > 0;
@@ -81,9 +82,13 @@ void mmc1_init(struct Cartridge* cartridge) {
     mmc1->chr_rom_bank_0 = &cartridge->chr_rom[mmc1->chr_rom_bank_idx_0 * CHR_BANK_SIZE];
     mmc1->chr_rom_bank_1 = &cartridge->chr_rom[mmc1->chr_rom_bank_idx_1 * CHR_BANK_SIZE];
 
-    mmc1->save_file = fopen("test.sav", "r+");
+    char* file_path_new = malloc(1024 * sizeof(char));
+    strcpy(file_path_new, file_path);
+    strcat(file_path_new, ".sav");
+
+    mmc1->save_file = fopen(file_path_new, "r+");
     if (mmc1->save_file == nullptr) {
-        mmc1->save_file = fopen("test.sav", "w+");
+        mmc1->save_file = fopen(file_path_new, "w+");
     }
 
     fseek(mmc1->save_file, 0, SEEK_END);
@@ -93,6 +98,8 @@ void mmc1_init(struct Cartridge* cartridge) {
     for(int i = 0; i < file_size; i++) {
         fread(cartridge->prg_ram + i, 1, 1, mmc1->save_file);
     }
+
+    free(file_path_new);
 }
 
 void mmc1_free(struct Cartridge* cartridge) {

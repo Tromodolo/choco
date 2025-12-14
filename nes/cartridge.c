@@ -49,7 +49,7 @@ struct Cartridge* nes_cartridge_load_from_file(const char* file_path) {
         fread(file_contents + i, 1, 1, file);
     }
 
-    struct Cartridge* cartridge = nes_cartridge_load_from_buffer(file_contents, file_size);
+    struct Cartridge* cartridge = nes_cartridge_load_from_buffer(file_contents, file_path);
 
     fclose(file);
     free(file_contents);
@@ -57,7 +57,7 @@ struct Cartridge* nes_cartridge_load_from_file(const char* file_path) {
     return cartridge;
 }
 
-struct Cartridge* nes_cartridge_load_from_buffer(const uint8_t* buffer, const long size) {
+struct Cartridge* nes_cartridge_load_from_buffer(const uint8_t* buffer, const char* file_path) {
     struct Cartridge* cartridge = malloc(sizeof(struct Cartridge));
 
 #ifndef TESTS
@@ -138,7 +138,7 @@ struct Cartridge* nes_cartridge_load_from_buffer(const uint8_t* buffer, const lo
         memcpy(cartridge->chr_rom, &buffer[chr_rom_start], chr_rom_size * sizeof(uint8_t));
     }
 
-    mapper_init(cartridge);
+    mapper_init(cartridge, file_path);
 
     return cartridge;
 }

@@ -5,7 +5,7 @@
 #include "impl/nrom.h"
 #include "impl/uxrom.h"
 
-void mapper_init(struct Cartridge* cartridge) {
+void mapper_init(struct Cartridge* cartridge, const char* file_path) {
     switch (cartridge->mapper_type) {
         case Mapper_NRom:
             nrom_init(cartridge);
@@ -14,7 +14,7 @@ void mapper_init(struct Cartridge* cartridge) {
             uxrom_init(cartridge);
             break;
         case Mapper_MMC1:
-            mmc1_init(cartridge);
+            mmc1_init(cartridge, file_path);
             break;
         default:
             break;

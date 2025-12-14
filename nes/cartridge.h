@@ -40,7 +40,7 @@ struct Cartridge {
 };
 
 struct Cartridge* nes_cartridge_load_from_file(const char* file_path);
-struct Cartridge* nes_cartridge_load_from_buffer(const uint8_t* buffer, const long size);
+struct Cartridge* nes_cartridge_load_from_buffer(const uint8_t* buffer, const char* file_path);
 void nes_cartridge_free(struct Cartridge* cartridge);
 
 uint8_t nes_cartridge_read_char(const struct Cartridge* cartridge, uint16_t addr);
