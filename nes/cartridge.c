@@ -118,6 +118,8 @@ struct Cartridge* nes_cartridge_load_from_buffer(const uint8_t* buffer, const ch
 
     cartridge->work_ram = malloc(sizeof(uint8_t) * WORK_RAM_SIZE);
 
+#ifndef TESTS
+    // Avoiding running this when running test suite, cause it slows down tests to like 10%
     srand(time(nullptr));
     for (int i = 0; i < WORK_RAM_SIZE; ++i) {
         cartridge->work_ram[i] = rand() % 0xFF;
@@ -126,6 +128,7 @@ struct Cartridge* nes_cartridge_load_from_buffer(const uint8_t* buffer, const ch
     for (int i = 0; i < prg_ram_size; ++i) {
         cartridge->prg_ram[i] = rand() % 0xFF;
     }
+#endif
 
     int prg_rom_start = HEADER_SIZE;
     if (skip_trainer)
