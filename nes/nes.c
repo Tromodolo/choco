@@ -35,6 +35,8 @@ struct Nes* nes_init(const char* file_path) {
 
     nes->realign_dma = false;
 
+    nes->render_debug_nametables = true;
+
     return nes;
 }
 
@@ -135,6 +137,10 @@ void nes_read_inputs(struct Nes* nes) {
     //
     // if (nes->player_1_input.value > 0)
     //     printf("%d\n", nes->player_1_input.value);
+
+    if (IsKeyPressed(KEY_M)) {
+        nes->render_debug_nametables = !nes->render_debug_nametables;
+    }
 }
 
 inline uint8_t nes_read_char(struct Nes* nes, const uint16_t addr) {
@@ -385,6 +391,8 @@ void nes_draw_debug_info(const struct Nes* nes) {
 
     int y = top_padding;
 
+    DrawText("Press M to hide/show nametables", 10, SCREEN_HEIGHT * 2 + 10, 24, WHITE);
+
     DrawText("Registers", left_padding, y, 24, WHITE);
     y += 30;
 
@@ -440,6 +448,8 @@ void nes_draw_debug_info(const struct Nes* nes) {
     y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "NT Y",     "%d",  nes->ppu->loopy_temp.nametable_y);
     y = draw_debug_value(value_x_pos, y, line_height, value_font_size, WHITE, "Fine Y",   "%d",  nes->ppu->loopy_temp.fine_y);
 
-    ppu_get_nametables(nes, nes->ppu, nametable.buffer);
-    draw_debug_image(768, 0, SCREEN_WIDTH * 2, SCREEN_HEIGHT * 2, &nametable);
+    if (nes->render_debug_nametables) {
+        ppu_get_nametables(nes, nes->ppu, nametable.buffer);
+        draw_debug_image(768, 0, SCREEN_WIDTH * 2, SCREEN_HEIGHT * 2, &nametable);
+    }
 }
