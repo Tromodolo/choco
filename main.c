@@ -77,5 +77,8 @@ int main(void) {
         EndDrawing();
     }
 
+    StopAudioStream(stream);
+    core_free(core);
+
     return 0;
 }

@@ -9,7 +9,7 @@
 #include "palette.h"
 #include "../mappers/mapper.h"
 
-constexpr int OAM_SIZE = 0xFF;
+constexpr int OAM_SIZE = 0x100;
 constexpr int PALETTE_SIZE = 0x20;
 constexpr int VRAM_SIZE = 0x800;
 
@@ -180,7 +180,7 @@ uint8_t internal_read(const struct Nes* nes, struct PPU* ppu, const uint16_t add
 
     if (addr <= 0x1FFF) {
         const uint8_t value = ppu->read_buffer;
-        ppu->read_buffer = ppu->chr_rom[addr];
+        ppu->read_buffer = read_chr_rom(nes, ppu, addr);
         return value;
     }
     if (addr <= 0x3EFF) {
@@ -189,10 +189,10 @@ uint8_t internal_read(const struct Nes* nes, struct PPU* ppu, const uint16_t add
         return value;
     }
     if (addr == 0x3f10 || addr == 0x3f14 || addr == 0x3f18 || addr == 0x3f1c) {
-        return ppu->palette[addr & 0x0F];
+        return ppu->palette[(addr - 0x3f00) & 0x0F];
     }
     if (addr <= 0x3fff) {
-        return ppu->palette[addr & 0xFF];
+        return ppu->palette[(addr - 0x3f00) & 0x1F];
     }
 
     assert(false);
@@ -206,7 +206,7 @@ void internal_write(const struct Nes* nes, const struct PPU* ppu, const uint16_t
     }
 
     if (addr <= 0x1FFF) {
-        ppu->chr_rom[addr] = val;
+        // ppu->chr_rom[addr] = val;
         return;
     }
     if (addr <= 0x3EFF) {
@@ -214,11 +214,11 @@ void internal_write(const struct Nes* nes, const struct PPU* ppu, const uint16_t
         return;
     }
     if (addr == 0x3f10 || addr == 0x3f14 || addr == 0x3f18 || addr == 0x3f1c) {
-        ppu->palette[addr & 0x0F] = val;
+        ppu->palette[(addr - 0x3f00) & 0x0F] = val;
         return;
     }
     if (addr <= 0x3fff) {
-        ppu->palette[addr & 0x1F] = val;
+        ppu->palette[(addr - 0x3f00) & 0x1F] = val;
         return;
     }
 
@@ -520,7 +520,7 @@ inline void evaluate_sprites_on_line(struct PPU* ppu) {
 
     // Go through all of OAM and figure out if there are any sprites on current line
     for (int sprite_index = 0; sprite_index < 64; sprite_index++) {
-        if (ppu->sprite_count > 8) {
+        if (ppu->sprite_count >= 8) {
             ppu->status_register.sprite_overflow = 1;
             break;
         }
