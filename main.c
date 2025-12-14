@@ -28,7 +28,7 @@ int main(void) {
 #endif
 
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Hallo");
-    SetTargetFPS(144);
+    SetTargetFPS(60);
 
     InitAudioDevice();
     SetAudioStreamBufferSizeDefault(1024);
@@ -53,7 +53,8 @@ int main(void) {
             core->frame_buffer_changed = false;
             framecount++;
 
-            sprintf(title, "%d", framecount);
+            auto frametime = GetFrameTime();
+            sprintf(title, "%d %f", framecount, frametime);
             SetWindowTitle(title);
         }
 
