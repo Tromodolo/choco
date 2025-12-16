@@ -2,17 +2,23 @@
 #define CORE_H
 #include <raylib.h>
 
+enum CoreType {
+    Core_Undefined,
+    Core_Nes
+};
+
 struct Core {
     int buffer_width;
     int buffer_height;
     Color** frame_buffers;
     int active_buffer;
     bool frame_buffer_changed;
-    void* emu;
     AudioCallback audio_callback;
+    enum CoreType type;
+    void* emu;
 };
 
-struct Core* get_core_for_file(const char* file_path);
+struct Core* get_core_for_file(const char* file_path, enum CoreType type);
 void core_audio_callback(struct Core* core, short* samples, unsigned int sample_count);
 void core_clear_frame_buffer_changed(struct Core* core);
 void core_free(struct Core* core);

@@ -33,6 +33,6 @@ add_executable(choco
         nes/mappers/impl/mmc1.c
 )
 
-target_link_libraries(choco raylib)
+target_link_libraries(choco raylib m)
 
 file(COPY tests/tomharte DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")

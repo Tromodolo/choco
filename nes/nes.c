@@ -381,7 +381,7 @@ void draw_debug_image(const int x, const int y, const int width, const int heigh
 struct DebugImage nametable = { 0 };
 void nes_draw_debug_info(const struct Nes* nes) {
     constexpr int left_padding        = (SCREEN_WIDTH * 2) + 10;
-    constexpr int top_padding         = 10;
+    constexpr int top_padding         = MENU_HEIGHT + 10;
     constexpr int header_x_pos        = left_padding + 15;
     constexpr int value_x_pos         = header_x_pos + 15;
 
@@ -450,6 +450,6 @@ void nes_draw_debug_info(const struct Nes* nes) {
 
     if (nes->render_debug_nametables) {
         ppu_get_nametables(nes, nes->ppu, nametable.buffer);
-        draw_debug_image(768, 0, SCREEN_WIDTH * 2, SCREEN_HEIGHT * 2, &nametable);
+        draw_debug_image(768, MENU_HEIGHT, SCREEN_WIDTH * 2, SCREEN_HEIGHT * 2, &nametable);
     }
 }

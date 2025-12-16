@@ -4,9 +4,10 @@
 #include "nes.h"
 #include "ppu/ppu.h"
 
-inline struct Core* get_core_for_file(const char* file_path) {
+inline struct Core* get_core_for_file(const char* file_path, enum CoreType type) {
     struct Core* core = malloc(sizeof(struct Core));
 
+    core->type = type;
     core->emu = nes_init(file_path);
     core->buffer_height = EFFECTIVE_SCREEN_HEIGHT;
     core->buffer_width = SCREEN_WIDTH;

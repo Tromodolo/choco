@@ -35,12 +35,18 @@
 *
 *     3. This notice may not be removed or altered from any source distribution.
 *
+**********************************************************************************************
+*
+*   NOTICE: The includes of raylib and raygui in this file have been adjusted to better match this project.
+*   The <raylib.h> include has also been moved into the include guard.
+*   The rest of the file is fully unchanged
+*
 **********************************************************************************************/
-
-#include "raylib.h"
 
 #ifndef GUI_WINDOW_FILE_DIALOG_H
 #define GUI_WINDOW_FILE_DIALOG_H
+
+#include "raylib.h"
 
 // Gui file dialog context data
 typedef struct {
@@ -117,7 +123,7 @@ void GuiWindowFileDialog(GuiWindowFileDialogState *state);
 ************************************************************************************/
 #if defined(GUI_WINDOW_FILE_DIALOG_IMPLEMENTATION)
 
-#include "../../src/raygui.h"
+#include "raygui.h"
 
 #include <string.h>     // Required for: strcpy()
 
