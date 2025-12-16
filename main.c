@@ -45,10 +45,11 @@ int main(void) {
     char file_path[512] = { 0 };
     enum CoreType type = Core_Undefined;
     Texture2D texture = { 0 };
+    bool should_hard_reset = false;
 
     while (!WindowShouldClose()) {
 
-        if (file_dialog_state.SelectFilePressed)
+        if (file_dialog_state.SelectFilePressed || should_hard_reset)
         {
             if (core != nullptr) {
                 StopAudioStream(stream);
@@ -56,7 +57,7 @@ int main(void) {
                 core = nullptr;
             }
 
-            if (IsFileExtension(file_dialog_state.fileNameText, ".nes"))
+            if (file_dialog_state.SelectFilePressed && IsFileExtension(file_dialog_state.fileNameText, ".nes"))
             {
                 strcpy(file_path, TextFormat("%s" PATH_SEPERATOR "%s", file_dialog_state.dirPathText, file_dialog_state.fileNameText));
                 type = Core_Nes;
@@ -71,6 +72,7 @@ int main(void) {
             PlayAudioStream(stream);
 
             file_dialog_state.SelectFilePressed = false;
+            should_hard_reset = false;
         }
 
         if (core != nullptr) {
@@ -114,6 +116,10 @@ int main(void) {
             DrawRectangle(0, 0, SCREEN_WIDTH, MENU_HEIGHT, GRAY);
             if (GuiButton((Rectangle){ 0, 0, 140, MENU_HEIGHT }, GuiIconText(ICON_FILE_OPEN, "Open File"))) {
                 file_dialog_state.windowActive = true;
+            }
+
+            if (GuiButton((Rectangle){ 140, 0, 140, MENU_HEIGHT }, GuiIconText(ICON_RESTART, "Hard Reset"))) {
+                should_hard_reset = true;
             }
 
             GuiUnlock();
