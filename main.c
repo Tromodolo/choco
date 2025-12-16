@@ -43,7 +43,6 @@ int main(void) {
     GuiWindowFileDialogState file_dialog_state = InitGuiWindowFileDialog(GetWorkingDirectory());
 
     char file_path[512] = { 0 };
-    char title[100] = { 0 };
     enum CoreType type = Core_Undefined;
     Texture2D texture = { 0 };
 
@@ -123,7 +122,6 @@ int main(void) {
         EndDrawing();
     }
 
-    free(title);
     StopAudioStream(stream);
     core_free(core);
 
