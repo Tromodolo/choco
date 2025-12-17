@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #include "main.h"
-#include "nes/core.h"
+#include "core.h"
 #include "tests/tests.h"
 
 #define RAYGUI_IMPLEMENTATION
