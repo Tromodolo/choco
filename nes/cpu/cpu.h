@@ -52,6 +52,7 @@ struct CPU {
 
     bool is_stopped;
     bool ready;
+    bool irq_pending;
 
     Flags p;
 

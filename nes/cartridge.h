@@ -15,6 +15,7 @@ enum Mapper {
     Mapper_MMC1 = 1,
     Mapper_UxRom = 2,
     Mapper_CNRom = 3,
+    Mapper_MMC3 = 4
 };
 
 enum Mirroring {

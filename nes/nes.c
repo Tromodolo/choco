@@ -65,6 +65,15 @@ inline void nes_tick(struct Nes* nes, Color* frame_buffer, bool* is_new_frame){
     nes_cpu_tick(nes);
     apu_tick(nes->apu, nes->sample_cycle_count);
 
+    if (!nes->cpu->p.interrupt_disable) {
+        if (apu_get_irq_pending(nes->apu)) {
+            nes->cpu->irq_pending = true;
+        }
+        if (mapper_get_irq(nes->cartridge)) {
+            nes->cpu->irq_pending = true;
+        }
+    }
+
     nes->cpu->dma_read_write_latch = !nes->cpu->dma_read_write_latch;
     if (nes->cpu->is_dma_active && nes->apu->dmc->dmc_dma_timer != 1 && !nes->realign_dma) {
         if (nes->cpu->dma_read_write_latch) { // Read

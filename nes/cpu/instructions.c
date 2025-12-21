@@ -889,6 +889,11 @@ inline void nes_cpu_handle_instruction(struct Nes* nes, struct CPU* cpu, const u
         handle_cpu_interrupt(nes, cpu, Interrupt_NMI);
         return;
     }
+    if (!cpu->p.interrupt_disable && cpu->irq_pending) {
+        handle_cpu_interrupt(nes, cpu, Interrupt_IRQ);
+        cpu->irq_pending = false;
+        return;
+    }
 
     switch (opcode) {
         INSTRUCTION(0x00, brk, 1, 7, false, Addressing_NoneAddressing)

@@ -31,6 +31,7 @@ add_executable(choco
         nes/mappers/impl/nrom.c
         nes/mappers/impl/uxrom.c
         nes/mappers/impl/mmc1.c
+        nes/mappers/impl/mmc3.c
 )
 
 target_link_libraries(choco raylib m)

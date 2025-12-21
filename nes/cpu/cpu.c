@@ -26,6 +26,7 @@ struct CPU* nes_cpu_init(struct Nes* nes) {
 
     cpu->is_stopped = false;
     cpu->ready = true;
+    cpu->irq_pending = false;
 
     cpu->current_instruction = 0;
     cpu->read_tmp = 0;
