@@ -41,6 +41,7 @@ int main(void) {
     SetAudioStreamCallback(stream, get_samples);
 
     GuiWindowFileDialogState file_dialog_state = InitGuiWindowFileDialog(GetWorkingDirectory());
+    strcpy(file_dialog_state.filterExt, ".nes;DIR\0");
 
     char file_path[512] = { 0 };
     enum CoreType type = Core_Undefined;
