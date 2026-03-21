@@ -12,8 +12,9 @@ endif (TESTS)
 add_executable(choco
         main.c
         blip_buf/blip_buf.c
-        nes/nes.c
         core.c
+
+        nes/nes.c
         nes/cartridge.c
         nes/cpu/cpu.c
         nes/ppu/ppu.c
@@ -24,16 +25,24 @@ add_executable(choco
         nes/apu/dmc.c
         nes/cpu/instructions.c
         nes/nes-logging.c
-        tests/tests.c
-        tests/auto-tests.c
-        tests/json/cJSON.c
         nes/mappers/mapper.c
         nes/mappers/impl/nrom.c
         nes/mappers/impl/uxrom.c
         nes/mappers/impl/mmc1.c
         nes/mappers/impl/mmc3.c
+
+        tests/tests.c
+        tests/json/cJSON.c
+
+        dmg/dmg.c
+        dmg/dmg.h
+        dmg/cpu.c
+        dmg/cpu.h
+        dmg/cartridge.c
+        dmg/cartridge.h
 )
 
 target_link_libraries(choco raylib m)
 
-file(COPY tests/tomharte DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+file(COPY tests/nes/tomharte DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+file(COPY tests/dmg/SingleStepTests DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")

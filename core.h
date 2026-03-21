@@ -4,7 +4,8 @@
 
 enum CoreType {
     Core_Undefined,
-    Core_Nes
+    Core_Nes,
+    Core_DMG
 };
 
 struct Core {
