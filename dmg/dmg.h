@@ -20,8 +20,4 @@ void dmg_tick(struct DMG* dmg, Color* frame_buffer, bool* is_new_frame);
 
 uint8_t dmg_read_u8(struct DMG* dmg, uint16_t addr);
 void dmg_write_u8(struct DMG* dmg, uint16_t addr, uint8_t val);
-
-uint16_t dmg_read_u16(struct DMG* dmg, uint16_t addr);
-void dmg_write_u16(struct DMG* dmg, uint16_t addr, uint16_t val);
-
 #endif //DMG_H

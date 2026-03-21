@@ -93,7 +93,12 @@ enum Instructions {
     LD_L_D8 = 0x2E,
     LD_A_D8 = 0x3E,
 
-    LD_HL_D8 = 0x36
+    LD_HL_D8 = 0x36,
+
+    LD_BC_D16 = 0x01,
+    LD_DE_D16 = 0x11,
+    LD_HL_D16 = 0x21,
+    LD_SP_D16 = 0x31,
 };
 
 struct CPU* dmg_cpu_init(struct DMG* dmg) {
@@ -112,6 +117,9 @@ struct CPU* dmg_cpu_init(struct DMG* dmg) {
     cpu->PC = 0x100; // Setting to 0x100 skips the BIOS
 
     cpu->IR = 0x00;
+
+    cpu->TMP = 0;
+    cpu->TMP2 = 0;
 
     cpu->total_cycles = 0;
     cpu->instruction_step = 0;
@@ -134,6 +142,14 @@ void dmg_cpu_tick_m_cycle(struct DMG* dmg, struct CPU* cpu) {
     dmg_cpu_process_instruction(dmg, cpu, cpu->IR);
 }
 
+//
+// UTIL FUNCTIONS
+//
+void increment_instruction_step(struct CPU* cpu, const uint8_t final_step) {
+    cpu->is_final_step = cpu->instruction_step == final_step;
+    cpu->instruction_step++;
+}
+
 uint8_t* get_r8(struct CPU* cpu, uint8_t index) {
     switch (index) {
         case 0:
@@ -153,9 +169,59 @@ uint8_t* get_r8(struct CPU* cpu, uint8_t index) {
             return &cpu->B;
         case 7:
             return &cpu->A;
+        default: assert(false);
     }
 }
 
+uint16_t* get_r16(struct CPU* cpu, uint8_t index) {
+    switch (index) {
+        case 0:
+            return &cpu->BC;
+        case 1:
+            return &cpu->DE;
+        case 2:
+            return &cpu->HL;
+        case 3:
+            return &cpu->SP;
+        default: assert(false);
+    }
+}
+
+uint16_t* get_r16_stack(struct CPU* cpu, uint8_t index) {
+    switch (index) {
+        case 0:
+            return &cpu->BC;
+        case 1:
+            return &cpu->DE;
+        case 2:
+            return &cpu->HL;
+        case 3:
+            return &cpu->AF;
+        default: assert(false);
+    }
+}
+
+uint16_t get_r16_memaddr(struct CPU* cpu, uint8_t index) {
+    switch (index) {
+        case 0:
+            return cpu->BC;
+        case 1:
+            return cpu->DE;
+        case 2:
+            const auto hli = cpu->HL;
+            cpu->HL++;
+            return hli;
+        case 3:
+            const auto hld = cpu->HL;
+            cpu->HL--;
+            return hld;
+        default: assert(false);
+    }
+}
+
+//
+// 8 BIT INSTRUCTIONS
+//
 void load_r8_r8(struct DMG* dmg, struct CPU* cpu) {
     const auto target = (cpu->IR >> 3) & 0x7;
     const auto destination = cpu->IR & 0x7;
@@ -180,8 +246,7 @@ void load_r8_hl(struct DMG* dmg, struct CPU* cpu) {
         default: break;
     }
 
-    cpu->is_final_step = cpu->instruction_step == 1;
-    cpu->instruction_step++;
+    increment_instruction_step(cpu, 1);
 }
 
 void load_hl_r8(struct DMG* dmg, struct CPU* cpu) {
@@ -197,8 +262,7 @@ void load_hl_r8(struct DMG* dmg, struct CPU* cpu) {
             break;
     }
 
-    cpu->is_final_step = cpu->instruction_step == 1;
-    cpu->instruction_step++;
+    increment_instruction_step(cpu, 1);
 }
 
 void load_r8_d8(struct DMG* dmg, struct CPU* cpu) {
@@ -215,8 +279,7 @@ void load_r8_d8(struct DMG* dmg, struct CPU* cpu) {
         default: break;
     }
 
-    cpu->is_final_step = cpu->instruction_step == 1;
-    cpu->instruction_step++;
+    increment_instruction_step(cpu, 1);
 }
 
 void load_hl_d8(struct DMG* dmg, struct CPU* cpu) {
@@ -233,8 +296,32 @@ void load_hl_d8(struct DMG* dmg, struct CPU* cpu) {
             break;
     }
 
-    cpu->is_final_step = cpu->instruction_step == 2;
-    cpu->instruction_step++;
+    increment_instruction_step(cpu, 2);
+}
+
+//
+// 16 BIT INSTRUCTIONS
+//
+void load_r16_d16(struct DMG* dmg, struct CPU* cpu) {
+    switch (cpu->instruction_step) {
+        case 0:
+            cpu->TMP = dmg_read_u8(dmg, cpu->PC);
+            cpu->PC++;
+            break;
+        case 1:
+            cpu->TMP2 = dmg_read_u8(dmg, cpu->PC);
+            cpu->PC++;
+            break;
+        case 2:
+            const auto target = (cpu->IR >> 4) & 0x3;
+            const auto target_register = get_r16(cpu, target);
+
+            *target_register = (cpu->TMP2 << 8) | cpu->TMP;
+        default:
+            break;
+    }
+
+    increment_instruction_step(cpu, 2);
 }
 
 void dmg_cpu_process_instruction(struct DMG* dmg, struct CPU* cpu, uint8_t instruction) {
@@ -330,6 +417,13 @@ void dmg_cpu_process_instruction(struct DMG* dmg, struct CPU* cpu, uint8_t instr
 
         case LD_HL_D8:
             load_hl_d8(dmg, cpu);
+            break;
+
+        case LD_BC_D16:
+        case LD_DE_D16:
+        case LD_HL_D16:
+        case LD_SP_D16:
+            load_r16_d16(dmg, cpu);
             break;
 
         default:

@@ -44,10 +44,3 @@ void dmg_write_u8(struct DMG* dmg, uint16_t addr, uint8_t val) {
     dmg->cartridge->rom[addr] = val;
 #endif
 }
-
-uint16_t dmg_read_u16(struct DMG* dmg, uint16_t addr) {
-
-}
-void dmg_write_u16(struct DMG* dmg, uint16_t addr, uint16_t val) {
-
-}

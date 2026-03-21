@@ -58,6 +58,7 @@ struct CPU {
     uint16_t PC;
     uint8_t IR;
     uint8_t TMP;
+    uint8_t TMP2;
 
     enum LastOperation last_operation;
     unsigned long long total_cycles;
