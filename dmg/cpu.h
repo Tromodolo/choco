@@ -15,6 +15,12 @@ enum CPU_Flags {
     Flag_Zero           = 1 << 7
 };
 
+enum LastOperation {
+    Operation_None = 0,
+    Operation_Read = 1,
+    Operation_Write = 2
+};
+
 struct CPU {
     union {
         struct {
@@ -51,8 +57,12 @@ struct CPU {
     uint16_t SP;
     uint16_t PC;
     uint8_t IR;
+    uint8_t TMP;
 
+    enum LastOperation last_operation;
     unsigned long long total_cycles;
+    unsigned int instruction_step;
+    bool is_final_step;
 };
 
 struct CPU* dmg_cpu_init(struct DMG* dmg);
