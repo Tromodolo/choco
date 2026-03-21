@@ -109,6 +109,15 @@ enum Instructions {
     LD_A_ABS_DE = 0x1A,
     LD_A_ABS_HLI = 0x2A,
     LD_A_ABS_HLD = 0x3A,
+
+    LD_ABS_D16_A = 0xEA,
+    LD_A_ABS_D16 = 0xFA,
+
+    LDH_C_A_INDIRECT = 0xE2,
+    LDH_A_C_INDIRECT = 0xF2,
+
+    LDH_D8_A_DIRECT = 0xE0,
+    LDH_A_D8_DIRECT = 0xF0,
 };
 
 struct CPU* dmg_cpu_init(struct DMG* dmg) {
@@ -351,7 +360,7 @@ void load_r16_abs_acc(struct DMG* dmg, struct CPU* cpu) {
     increment_instruction_step(cpu, 1);
 }
 
-void load_abs_r16_mem(struct DMG* dmg, struct CPU* cpu) {
+void load_acc_r16_abs(struct DMG* dmg, struct CPU* cpu) {
     switch (cpu->instruction_step) {
         case 0:
             const auto target = (cpu->IR >> 4) & 0x3;
@@ -366,6 +375,119 @@ void load_abs_r16_mem(struct DMG* dmg, struct CPU* cpu) {
     }
 
     increment_instruction_step(cpu, 1);
+}
+
+void load_acc_d16_abs(struct DMG* dmg, struct CPU* cpu) {
+    switch (cpu->instruction_step) {
+        case 0:
+            cpu->TMP = dmg_read_u8(dmg, cpu->PC);
+            cpu->PC++;
+            break;
+        case 1:
+            cpu->TMP2 = dmg_read_u8(dmg, cpu->PC);
+            cpu->PC++;
+            break;
+        case 2:
+            cpu->TMP = dmg_read_u8(dmg, (cpu->TMP2 << 8) | cpu->TMP);
+            break;
+        case 3:
+            cpu->A = cpu->TMP;
+            break;
+        default:
+            break;
+    }
+
+    increment_instruction_step(cpu, 3);
+}
+
+void load_d16_abs_acc(struct DMG* dmg, struct CPU* cpu) {
+    switch (cpu->instruction_step) {
+        case 0:
+            cpu->TMP = dmg_read_u8(dmg, cpu->PC);
+            cpu->PC++;
+            break;
+        case 1:
+            cpu->TMP2 = dmg_read_u8(dmg, cpu->PC);
+            cpu->PC++;
+            break;
+        case 2:
+            dmg_write_u8(dmg, (cpu->TMP2 << 8) | cpu->TMP, cpu->A);
+            break;
+        case 3:
+        default:
+            // No operation, instruction technically runs here but does nothing
+            break;
+    }
+
+    increment_instruction_step(cpu, 3);
+}
+
+void load_high_acc_c_indirect(struct DMG* dmg, struct CPU* cpu) {
+    switch (cpu->instruction_step) {
+        case 0:
+            cpu->TMP = dmg_read_u8(dmg, 0xFF00 | cpu->C);
+            break;
+        case 1:
+            cpu->A = cpu->TMP;
+            break;
+        default:
+            // No operation, instruction technically runs here but does nothing
+            break;
+    }
+
+    increment_instruction_step(cpu, 1);
+}
+
+void load_high_c_indirect_acc(struct DMG* dmg, struct CPU* cpu) {
+    switch (cpu->instruction_step) {
+        case 0:
+            dmg_write_u8(dmg, 0xFF00 | cpu->C, cpu->A);
+            break;
+        case 1:
+        default:
+            // No operation, instruction technically runs here but does nothing
+            break;
+    }
+
+    increment_instruction_step(cpu, 1);
+}
+
+void load_high_acc_d8_indirect(struct DMG* dmg, struct CPU* cpu) {
+    switch (cpu->instruction_step) {
+        case 0:
+            cpu->TMP = dmg_read_u8(dmg, cpu->PC);
+            cpu->PC++;
+            break;
+        case 1:
+            cpu->TMP = dmg_read_u8(dmg, 0xFF00 | cpu->TMP);
+            break;
+        case 2:
+            cpu->A = cpu->TMP;
+            break;
+        default:
+            // No operation, instruction technically runs here but does nothing
+            break;
+    }
+
+    increment_instruction_step(cpu, 2);
+}
+
+void load_high_d8_indirect_acc(struct DMG* dmg, struct CPU* cpu) {
+    switch (cpu->instruction_step) {
+        case 0:
+            cpu->TMP = dmg_read_u8(dmg, cpu->PC);
+            cpu->PC++;
+            break;
+        case 1:
+            dmg_write_u8(dmg, 0xFF00 | cpu->TMP, cpu->A);
+            break;
+        case 2:
+        default:
+            // No operation, instruction technically runs here but does nothing
+            break;
+    }
+
+    increment_instruction_step(cpu, 2);
 }
 
 void dmg_cpu_process_instruction(struct DMG* dmg, struct CPU* cpu, const uint8_t instruction) {
@@ -481,7 +603,29 @@ void dmg_cpu_process_instruction(struct DMG* dmg, struct CPU* cpu, const uint8_t
         case LD_A_ABS_DE:
         case LD_A_ABS_HLI:
         case LD_A_ABS_HLD:
-            load_abs_r16_mem(dmg, cpu);
+            load_acc_r16_abs(dmg, cpu);
+            break;
+
+        case LD_A_ABS_D16:
+            load_acc_d16_abs(dmg, cpu);
+            break;
+
+        case LD_ABS_D16_A:
+            load_d16_abs_acc(dmg, cpu);
+            break;
+
+        case LDH_C_A_INDIRECT:
+            load_high_c_indirect_acc(dmg, cpu);
+            break;
+        case LDH_A_C_INDIRECT:
+            load_high_acc_c_indirect(dmg, cpu);
+            break;
+
+        case LDH_D8_A_DIRECT:
+            load_high_d8_indirect_acc(dmg, cpu);
+            break;
+        case LDH_A_D8_DIRECT:
+            load_high_acc_d8_indirect(dmg, cpu);
             break;
 
         default:

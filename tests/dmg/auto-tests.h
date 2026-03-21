@@ -218,7 +218,7 @@ void run_auto_tests() {
             printf(ANSI_COLOR_YELLOW "- Wrong number of cycles\n" ANSI_COLOR_RESET);
     }
 
-    printf("Amount of successful tests: %d/256", successful_tests);
+    printf("Amount of successful tests: %d/512", successful_tests);
 }
 
 #endif //AUTO_TESTS_H
