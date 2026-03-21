@@ -37,12 +37,12 @@ void run_auto_tests() {
             continue;
             }
 
-        bool success = true;
+        bool success = false;
 
-        bool incorrect_registers = false;
-        bool incorrect_memory = false;
-        bool incorrect_cycles = false;
-        bool incorrect_memory_access = false;
+        bool correct_registers = true;
+        bool correct_memory = true;
+        bool correct_cycles = true;
+        bool correct_memory_access = true;
 
         char* file_name = malloc(sizeof(char) * 20);
         sprintf(file_name, "SingleStepTests/%02x.json", opcode);
@@ -132,16 +132,13 @@ void run_auto_tests() {
             cJSON* c_cycle_flags = c_cycle_value->next;
 
             if (c_cycle_flags->valuestring[0] == 'r') { // was reading done?
-                success &= dmg->cpu->last_operation == Operation_Read;
+                correct_memory_access &= dmg->cpu->last_operation == Operation_Read;
             } else if (c_cycle_flags->valuestring[1] == 'w') { // was writing done?
-                success &= dmg->cpu->last_operation == Operation_Write;
+                correct_memory_access &= dmg->cpu->last_operation == Operation_Write;
             }
 
-            success &= dmg->cpu->last_memory_value == c_cycle_value->valueint;
-            success &= dmg->cpu->last_memory_addr == c_cycle_addr->valueint;
-
-            if (!success)
-                incorrect_memory_access = true;
+            correct_memory_access &= dmg->cpu->last_memory_value == c_cycle_value->valueint;
+            correct_memory_access &= dmg->cpu->last_memory_addr == c_cycle_addr->valueint;
 
             while (current_cycle) {
                 dmg_cpu_tick_m_cycle(dmg, dmg->cpu);
@@ -153,16 +150,13 @@ void run_auto_tests() {
                     c_cycle_flags = c_cycle_value->next;
 
                     if (c_cycle_flags->valuestring[0] == 'r') { // was reading done?
-                        success &= dmg->cpu->last_operation == Operation_Read;
+                        correct_memory_access &= dmg->cpu->last_operation == Operation_Read;
                     } else if (c_cycle_flags->valuestring[1] == 'w') { // was writing done?
-                        success &= dmg->cpu->last_operation == Operation_Write;
+                        correct_memory_access &= dmg->cpu->last_operation == Operation_Write;
                     }
 
-                    success &= dmg->cpu->last_memory_value == c_cycle_value->valueint;
-                    success &= dmg->cpu->last_memory_addr == c_cycle_addr->valueint;
-
-                    if (!success)
-                        incorrect_memory_access = true;
+                    correct_memory_access &= dmg->cpu->last_memory_value == c_cycle_value->valueint;
+                    correct_memory_access &= dmg->cpu->last_memory_addr == c_cycle_addr->valueint;
                 }
             }
 
@@ -182,19 +176,16 @@ void run_auto_tests() {
 
             const cJSON* c_final_ram = c_final_ime->next;
 
-            success &= dmg->cpu->A == c_final_a->valueint;
-            success &= dmg->cpu->B == c_final_b->valueint;
-            success &= dmg->cpu->C == c_final_c->valueint;
-            success &= dmg->cpu->D == c_final_d->valueint;
-            success &= dmg->cpu->E == c_final_e->valueint;
-            success &= dmg->cpu->F == c_final_f->valueint;
-            success &= dmg->cpu->H == c_final_h->valueint;
-            success &= dmg->cpu->L == c_final_l->valueint;
-            success &= (uint16_t)(dmg->cpu->PC - 1) == c_final_pc->valueint; // -1 is to handle the fetch on the final M cycle of an instruction
-            success &= dmg->cpu->SP == c_final_sp->valueint;
-
-            if (!success)
-                incorrect_registers = true;
+            correct_registers &= dmg->cpu->A == c_final_a->valueint;
+            correct_registers &= dmg->cpu->B == c_final_b->valueint;
+            correct_registers &= dmg->cpu->C == c_final_c->valueint;
+            correct_registers &= dmg->cpu->D == c_final_d->valueint;
+            correct_registers &= dmg->cpu->E == c_final_e->valueint;
+            correct_registers &= dmg->cpu->F == c_final_f->valueint;
+            correct_registers &= dmg->cpu->H == c_final_h->valueint;
+            correct_registers &= dmg->cpu->L == c_final_l->valueint;
+            correct_registers &= (uint16_t)(dmg->cpu->PC - 1) == c_final_pc->valueint; // -1 is to handle the fetch on the final M cycle of an instruction
+            correct_registers &= dmg->cpu->SP == c_final_sp->valueint;
 
             // assert(!incorrect_registers);
 
@@ -203,11 +194,7 @@ void run_auto_tests() {
                 const cJSON* c_final_ram_addr = c_final_ram_set->child;
                 const cJSON* c_final_ram_val = c_final_ram_addr->next;
 
-                success &= dmg->cartridge->rom[c_final_ram_addr->valueint] == c_final_ram_val->valueint;
-
-                if (!success)
-                    incorrect_memory = true;
-
+                correct_memory &= dmg->cartridge->rom[c_final_ram_addr->valueint] == c_final_ram_val->valueint;
                 // assert(!incorrect_memory);
 
                 c_final_ram_set = c_final_ram_set->next;
@@ -220,17 +207,14 @@ void run_auto_tests() {
                 c_cycles_child = c_cycles_child->next;
             }
 
-            success &= dmg->cpu->total_cycles == total_cycle_count;
-            if (!success)
-                incorrect_cycles = true;
-
+            correct_cycles &= dmg->cpu->total_cycles == total_cycle_count;
             // assert(!incorrect_cycles);
 
             dmg_free(dmg);
             child = child->next;
             current_test_index++;
 
-            success = !incorrect_registers && !incorrect_memory;
+            success = correct_registers && correct_memory && correct_memory_access;
             if (!success)
                 break;
         }
@@ -247,17 +231,17 @@ void run_auto_tests() {
             printf(ANSI_COLOR_RED "0x%02x FAILED!\n" ANSI_COLOR_RESET, opcode);
             printf("- Failed on test iteration %d\n", current_test_index);
 
-            if (incorrect_registers)
+            if (!correct_registers)
                 printf("- Register values are set wrong\n");
 
-            if (incorrect_memory)
+            if (!correct_memory)
                 printf("- Invalid memory values\n");
 
-            if (incorrect_memory_access)
+            if (!correct_memory_access)
                 printf("- Invalid memory access during cycles\n");
 
         }
-        if (incorrect_cycles)
+        if (!correct_cycles)
             printf(ANSI_COLOR_YELLOW "- Wrong number of cycles\n" ANSI_COLOR_RESET);
     }
 
