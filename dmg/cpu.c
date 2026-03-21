@@ -92,6 +92,8 @@ enum Instructions {
     LD_H_D8 = 0x26,
     LD_L_D8 = 0x2E,
     LD_A_D8 = 0x3E,
+
+    LD_HL_D8 = 0x36
 };
 
 struct CPU* dmg_cpu_init(struct DMG* dmg) {
@@ -217,6 +219,24 @@ void load_r8_d8(struct DMG* dmg, struct CPU* cpu) {
     cpu->instruction_step++;
 }
 
+void load_hl_d8(struct DMG* dmg, struct CPU* cpu) {
+    switch (cpu->instruction_step) {
+        case 0:
+            cpu->TMP = dmg_read_u8(dmg, cpu->PC);
+            cpu->PC++;
+        case 1:
+            dmg_write_u8(dmg, cpu->HL, cpu->TMP);
+            break;
+        case 2:
+        default:
+            // No operation, instruction technically runs here but does nothing
+            break;
+    }
+
+    cpu->is_final_step = cpu->instruction_step == 2;
+    cpu->instruction_step++;
+}
+
 void dmg_cpu_process_instruction(struct DMG* dmg, struct CPU* cpu, uint8_t instruction) {
     cpu->total_cycles++;
     switch (instruction) {
@@ -308,6 +328,9 @@ void dmg_cpu_process_instruction(struct DMG* dmg, struct CPU* cpu, uint8_t instr
             load_r8_d8(dmg, cpu);
             break;
 
+        case LD_HL_D8:
+            load_hl_d8(dmg, cpu);
+            break;
 
         default:
         case NOP:
