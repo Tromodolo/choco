@@ -60,16 +60,25 @@ struct CPU {
     uint8_t TMP;
     uint8_t TMP2;
 
-    enum LastOperation last_operation;
     unsigned long long total_cycles;
     unsigned int instruction_step;
     bool is_final_step;
+
+    // These are exclusively used for the cpu tests to compare where stuff is written to
+    enum LastOperation last_operation;
+    uint8_t last_memory_value;
+    uint16_t last_memory_addr;
 };
 
 struct CPU* dmg_cpu_init(struct DMG* dmg);
+
 void dmg_cpu_fetch_next_instruction(struct DMG* dmg, struct CPU* cpu);
 void dmg_cpu_tick_m_cycle(struct DMG* dmg, struct CPU* cpu);
 void dmg_cpu_process_instruction(struct DMG* dmg, struct CPU* cpu, uint8_t instruction);
+
+uint8_t dmg_cpu_read_u8(struct DMG* dmg, struct CPU* cpu, const uint16_t addr);
+void dmg_cpu_write_u8(struct DMG* dmg, struct CPU* cpu, const uint16_t addr, const uint8_t val);
+
 void dmg_cpu_free(struct CPU* cpu);
 
 #endif //CPU_H

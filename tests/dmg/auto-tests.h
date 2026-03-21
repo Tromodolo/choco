@@ -42,6 +42,7 @@ void run_auto_tests() {
         bool incorrect_registers = false;
         bool incorrect_memory = false;
         bool incorrect_cycles = false;
+        bool incorrect_memory_access = false;
 
         char* file_name = malloc(sizeof(char) * 20);
         sprintf(file_name, "SingleStepTests/%02x.json", opcode);
@@ -116,14 +117,53 @@ void run_auto_tests() {
             dmg->cpu->H = c_h->valueint;
             dmg->cpu->L = c_l->valueint;
 
-            dmg_cpu_fetch_next_instruction(dmg, dmg->cpu);
             auto current_cycle = c_cycles->child;
+            if (!current_cycle) {
+                assert(false); // Somethings wrong if this doesn't part
+                break;
+            }
+
+            // Prefetch needed cause tests assume it is already done
+            dmg_cpu_fetch_next_instruction(dmg, dmg->cpu);
+
+            // Because of the prefetch, there also needs to be a check before the cycle loop... annoying
+            cJSON* c_cycle_addr = current_cycle->child;
+            cJSON* c_cycle_value = c_cycle_addr->next;
+            cJSON* c_cycle_flags = c_cycle_value->next;
+
+            if (c_cycle_flags->valuestring[0] == 'r') { // was reading done?
+                success &= dmg->cpu->last_operation == Operation_Read;
+            } else if (c_cycle_flags->valuestring[1] == 'w') { // was writing done?
+                success &= dmg->cpu->last_operation == Operation_Write;
+            }
+
+            success &= dmg->cpu->last_memory_value == c_cycle_value->valueint;
+            success &= dmg->cpu->last_memory_addr == c_cycle_addr->valueint;
+
+            if (!success)
+                incorrect_memory_access = true;
+
             while (current_cycle) {
                 dmg_cpu_tick_m_cycle(dmg, dmg->cpu);
-
-                // Todo: verify reads and writes
-
                 current_cycle = current_cycle->next;
+
+                if (current_cycle) {
+                    c_cycle_addr = current_cycle->child;
+                    c_cycle_value = c_cycle_addr->next;
+                    c_cycle_flags = c_cycle_value->next;
+
+                    if (c_cycle_flags->valuestring[0] == 'r') { // was reading done?
+                        success &= dmg->cpu->last_operation == Operation_Read;
+                    } else if (c_cycle_flags->valuestring[1] == 'w') { // was writing done?
+                        success &= dmg->cpu->last_operation == Operation_Write;
+                    }
+
+                    success &= dmg->cpu->last_memory_value == c_cycle_value->valueint;
+                    success &= dmg->cpu->last_memory_addr == c_cycle_addr->valueint;
+
+                    if (!success)
+                        incorrect_memory_access = true;
+                }
             }
 
             const cJSON* c_final_a = c_final_values->child;
@@ -212,6 +252,9 @@ void run_auto_tests() {
 
             if (incorrect_memory)
                 printf("- Invalid memory values\n");
+
+            if (incorrect_memory_access)
+                printf("- Invalid memory access during cycles\n");
 
         }
         if (incorrect_cycles)

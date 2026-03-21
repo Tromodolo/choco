@@ -143,14 +143,18 @@ struct CPU* dmg_cpu_init(struct DMG* dmg) {
     cpu->total_cycles = 0;
     cpu->instruction_step = 0;
     cpu->is_final_step = false;
+
     cpu->last_operation = Operation_None;
+    cpu->last_memory_addr = 0;
+    cpu->last_memory_value = 0;
 
     return cpu;
 }
 
 void dmg_cpu_fetch_next_instruction(struct DMG* dmg, struct CPU* cpu) {
     const auto pc = cpu->PC;
-    const auto instruction = dmg_read_u8(dmg, pc);
+    const auto instruction = dmg_cpu_read_u8(dmg, cpu, pc);
+
     cpu->IR = instruction;
     cpu->instruction_step = 0;
     cpu->is_final_step = false;
@@ -159,6 +163,21 @@ void dmg_cpu_fetch_next_instruction(struct DMG* dmg, struct CPU* cpu) {
 
 void dmg_cpu_tick_m_cycle(struct DMG* dmg, struct CPU* cpu) {
     dmg_cpu_process_instruction(dmg, cpu, cpu->IR);
+}
+
+uint8_t dmg_cpu_read_u8(struct DMG* dmg, struct CPU* cpu, const uint16_t addr) {
+    const auto val = dmg_read_u8(dmg, addr);
+    cpu->last_operation = Operation_Read;
+    cpu->last_memory_addr = addr;
+    cpu->last_memory_value = val;
+    return val;
+}
+
+void dmg_cpu_write_u8(struct DMG* dmg, struct CPU* cpu, const uint16_t addr, const uint8_t val) {
+    cpu->last_operation = Operation_Write;
+    cpu->last_memory_addr = addr;
+    cpu->last_memory_value = val;
+    dmg_write_u8(dmg, addr, val);
 }
 
 //
@@ -255,7 +274,7 @@ void load_r8_r8(struct DMG* dmg, struct CPU* cpu) {
 void load_r8_hl(struct DMG* dmg, struct CPU* cpu) {
     switch (cpu->instruction_step) {
         case 0:
-            cpu->TMP = dmg_read_u8(dmg, cpu->HL);
+            cpu->TMP = dmg_cpu_read_u8(dmg, cpu, cpu->HL);
         case 1:
             const auto target = (cpu->IR >> 3) & 0x7;
             const auto target_register = get_r8(cpu, target);
@@ -274,7 +293,7 @@ void load_hl_r8(struct DMG* dmg, struct CPU* cpu) {
             const auto target = cpu->IR & 0x7;
             const auto target_register = get_r8(cpu, target);
 
-            dmg_write_u8(dmg, cpu->HL, *target_register);
+            dmg_cpu_write_u8(dmg, cpu, cpu->HL, *target_register);
         case 1:
         default:
             // No operation, instruction technically runs here but does nothing
@@ -287,7 +306,7 @@ void load_hl_r8(struct DMG* dmg, struct CPU* cpu) {
 void load_r8_d8(struct DMG* dmg, struct CPU* cpu) {
     switch (cpu->instruction_step) {
         case 0:
-            cpu->TMP = dmg_read_u8(dmg, cpu->PC);
+            cpu->TMP = dmg_cpu_read_u8(dmg, cpu, cpu->PC);
             cpu->PC++;
         case 1:
             const auto target = (cpu->IR >> 3) & 0x7;
@@ -304,10 +323,10 @@ void load_r8_d8(struct DMG* dmg, struct CPU* cpu) {
 void load_hl_d8(struct DMG* dmg, struct CPU* cpu) {
     switch (cpu->instruction_step) {
         case 0:
-            cpu->TMP = dmg_read_u8(dmg, cpu->PC);
+            cpu->TMP = dmg_cpu_read_u8(dmg, cpu, cpu->PC);
             cpu->PC++;
         case 1:
-            dmg_write_u8(dmg, cpu->HL, cpu->TMP);
+            dmg_cpu_write_u8(dmg, cpu, cpu->HL, cpu->TMP);
             break;
         case 2:
         default:
@@ -324,11 +343,11 @@ void load_hl_d8(struct DMG* dmg, struct CPU* cpu) {
 void load_r16_d16(struct DMG* dmg, struct CPU* cpu) {
     switch (cpu->instruction_step) {
         case 0:
-            cpu->TMP = dmg_read_u8(dmg, cpu->PC);
+            cpu->TMP = dmg_cpu_read_u8(dmg, cpu, cpu->PC);
             cpu->PC++;
             break;
         case 1:
-            cpu->TMP2 = dmg_read_u8(dmg, cpu->PC);
+            cpu->TMP2 = dmg_cpu_read_u8(dmg, cpu, cpu->PC);
             cpu->PC++;
             break;
         case 2:
@@ -349,7 +368,7 @@ void load_r16_abs_acc(struct DMG* dmg, struct CPU* cpu) {
             const auto target = (cpu->IR >> 4) & 0x3;
             const auto target_register = get_r16_memaddr(cpu, target);
 
-            dmg_write_u8(dmg, target_register, cpu->A);
+            dmg_cpu_write_u8(dmg, cpu, target_register, cpu->A);
             break;
         case 1:
         default:
@@ -366,7 +385,7 @@ void load_acc_r16_abs(struct DMG* dmg, struct CPU* cpu) {
             const auto target = (cpu->IR >> 4) & 0x3;
             const auto target_register = get_r16_memaddr(cpu, target);
 
-            cpu->A = dmg_read_u8(dmg, target_register);
+            cpu->A = dmg_cpu_read_u8(dmg, cpu, target_register);
             break;
         case 1:
         default:
@@ -380,15 +399,15 @@ void load_acc_r16_abs(struct DMG* dmg, struct CPU* cpu) {
 void load_acc_d16_abs(struct DMG* dmg, struct CPU* cpu) {
     switch (cpu->instruction_step) {
         case 0:
-            cpu->TMP = dmg_read_u8(dmg, cpu->PC);
+            cpu->TMP = dmg_cpu_read_u8(dmg, cpu, cpu->PC);
             cpu->PC++;
             break;
         case 1:
-            cpu->TMP2 = dmg_read_u8(dmg, cpu->PC);
+            cpu->TMP2 = dmg_cpu_read_u8(dmg, cpu, cpu->PC);
             cpu->PC++;
             break;
         case 2:
-            cpu->TMP = dmg_read_u8(dmg, (cpu->TMP2 << 8) | cpu->TMP);
+            cpu->TMP = dmg_cpu_read_u8(dmg, cpu, (cpu->TMP2 << 8) | cpu->TMP);
             break;
         case 3:
             cpu->A = cpu->TMP;
@@ -403,15 +422,15 @@ void load_acc_d16_abs(struct DMG* dmg, struct CPU* cpu) {
 void load_d16_abs_acc(struct DMG* dmg, struct CPU* cpu) {
     switch (cpu->instruction_step) {
         case 0:
-            cpu->TMP = dmg_read_u8(dmg, cpu->PC);
+            cpu->TMP = dmg_cpu_read_u8(dmg, cpu, cpu->PC);
             cpu->PC++;
             break;
         case 1:
-            cpu->TMP2 = dmg_read_u8(dmg, cpu->PC);
+            cpu->TMP2 = dmg_cpu_read_u8(dmg, cpu, cpu->PC);
             cpu->PC++;
             break;
         case 2:
-            dmg_write_u8(dmg, (cpu->TMP2 << 8) | cpu->TMP, cpu->A);
+            dmg_cpu_write_u8(dmg, cpu, (cpu->TMP2 << 8) | cpu->TMP, cpu->A);
             break;
         case 3:
         default:
@@ -425,7 +444,7 @@ void load_d16_abs_acc(struct DMG* dmg, struct CPU* cpu) {
 void load_high_acc_c_indirect(struct DMG* dmg, struct CPU* cpu) {
     switch (cpu->instruction_step) {
         case 0:
-            cpu->TMP = dmg_read_u8(dmg, 0xFF00 | cpu->C);
+            cpu->TMP = dmg_cpu_read_u8(dmg, cpu, 0xFF00 | cpu->C);
             break;
         case 1:
             cpu->A = cpu->TMP;
@@ -441,7 +460,7 @@ void load_high_acc_c_indirect(struct DMG* dmg, struct CPU* cpu) {
 void load_high_c_indirect_acc(struct DMG* dmg, struct CPU* cpu) {
     switch (cpu->instruction_step) {
         case 0:
-            dmg_write_u8(dmg, 0xFF00 | cpu->C, cpu->A);
+            dmg_cpu_write_u8(dmg, cpu, 0xFF00 | cpu->C, cpu->A);
             break;
         case 1:
         default:
@@ -455,11 +474,11 @@ void load_high_c_indirect_acc(struct DMG* dmg, struct CPU* cpu) {
 void load_high_acc_d8_indirect(struct DMG* dmg, struct CPU* cpu) {
     switch (cpu->instruction_step) {
         case 0:
-            cpu->TMP = dmg_read_u8(dmg, cpu->PC);
+            cpu->TMP = dmg_cpu_read_u8(dmg, cpu, cpu->PC);
             cpu->PC++;
             break;
         case 1:
-            cpu->TMP = dmg_read_u8(dmg, 0xFF00 | cpu->TMP);
+            cpu->TMP = dmg_cpu_read_u8(dmg, cpu, 0xFF00 | cpu->TMP);
             break;
         case 2:
             cpu->A = cpu->TMP;
@@ -475,11 +494,11 @@ void load_high_acc_d8_indirect(struct DMG* dmg, struct CPU* cpu) {
 void load_high_d8_indirect_acc(struct DMG* dmg, struct CPU* cpu) {
     switch (cpu->instruction_step) {
         case 0:
-            cpu->TMP = dmg_read_u8(dmg, cpu->PC);
+            cpu->TMP = dmg_cpu_read_u8(dmg, cpu, cpu->PC);
             cpu->PC++;
             break;
         case 1:
-            dmg_write_u8(dmg, 0xFF00 | cpu->TMP, cpu->A);
+            dmg_cpu_write_u8(dmg, cpu, 0xFF00 | cpu->TMP, cpu->A);
             break;
         case 2:
         default:
