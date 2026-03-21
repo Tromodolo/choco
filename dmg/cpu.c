@@ -99,6 +99,16 @@ enum Instructions {
     LD_DE_D16 = 0x11,
     LD_HL_D16 = 0x21,
     LD_SP_D16 = 0x31,
+
+    LD_ABS_BC_A = 0x02,
+    LD_ABS_DE_A = 0x12,
+    LD_ABS_HLI_A = 0x22,
+    LD_ABS_HLD_A = 0x32,
+
+    LD_A_ABS_BC = 0x0A,
+    LD_A_ABS_DE = 0x1A,
+    LD_A_ABS_HLI = 0x2A,
+    LD_A_ABS_HLD = 0x3A,
 };
 
 struct CPU* dmg_cpu_init(struct DMG* dmg) {
@@ -150,7 +160,7 @@ void increment_instruction_step(struct CPU* cpu, const uint8_t final_step) {
     cpu->instruction_step++;
 }
 
-uint8_t* get_r8(struct CPU* cpu, uint8_t index) {
+uint8_t* get_r8(struct CPU* cpu, const uint8_t index) {
     switch (index) {
         case 0:
             return &cpu->B;
@@ -173,7 +183,7 @@ uint8_t* get_r8(struct CPU* cpu, uint8_t index) {
     }
 }
 
-uint16_t* get_r16(struct CPU* cpu, uint8_t index) {
+uint16_t* get_r16(struct CPU* cpu, const uint8_t index) {
     switch (index) {
         case 0:
             return &cpu->BC;
@@ -187,21 +197,21 @@ uint16_t* get_r16(struct CPU* cpu, uint8_t index) {
     }
 }
 
-uint16_t* get_r16_stack(struct CPU* cpu, uint8_t index) {
+uint16_t get_r16_stack_addr(const struct CPU* cpu, const uint8_t index) {
     switch (index) {
         case 0:
-            return &cpu->BC;
+            return cpu->BC;
         case 1:
-            return &cpu->DE;
+            return cpu->DE;
         case 2:
-            return &cpu->HL;
+            return cpu->HL;
         case 3:
-            return &cpu->AF;
+            return cpu->AF;
         default: assert(false);
     }
 }
 
-uint16_t get_r16_memaddr(struct CPU* cpu, uint8_t index) {
+uint16_t get_r16_memaddr(struct CPU* cpu, const uint8_t index) {
     switch (index) {
         case 0:
             return cpu->BC;
@@ -324,7 +334,41 @@ void load_r16_d16(struct DMG* dmg, struct CPU* cpu) {
     increment_instruction_step(cpu, 2);
 }
 
-void dmg_cpu_process_instruction(struct DMG* dmg, struct CPU* cpu, uint8_t instruction) {
+void load_r16_abs_acc(struct DMG* dmg, struct CPU* cpu) {
+    switch (cpu->instruction_step) {
+        case 0:
+            const auto target = (cpu->IR >> 4) & 0x3;
+            const auto target_register = get_r16_memaddr(cpu, target);
+
+            dmg_write_u8(dmg, target_register, cpu->A);
+            break;
+        case 1:
+        default:
+            // No operation, instruction technically runs here but does nothing
+            break;
+    }
+
+    increment_instruction_step(cpu, 1);
+}
+
+void load_abs_r16_mem(struct DMG* dmg, struct CPU* cpu) {
+    switch (cpu->instruction_step) {
+        case 0:
+            const auto target = (cpu->IR >> 4) & 0x3;
+            const auto target_register = get_r16_memaddr(cpu, target);
+
+            cpu->A = dmg_read_u8(dmg, target_register);
+            break;
+        case 1:
+        default:
+            // No operation, instruction technically runs here but does nothing
+            break;
+    }
+
+    increment_instruction_step(cpu, 1);
+}
+
+void dmg_cpu_process_instruction(struct DMG* dmg, struct CPU* cpu, const uint8_t instruction) {
     cpu->total_cycles++;
     switch (instruction) {
         case LD_B_B:
@@ -424,6 +468,20 @@ void dmg_cpu_process_instruction(struct DMG* dmg, struct CPU* cpu, uint8_t instr
         case LD_HL_D16:
         case LD_SP_D16:
             load_r16_d16(dmg, cpu);
+            break;
+
+        case LD_ABS_BC_A:
+        case LD_ABS_DE_A:
+        case LD_ABS_HLI_A:
+        case LD_ABS_HLD_A:
+            load_r16_abs_acc(dmg, cpu);
+            break;
+
+        case LD_A_ABS_BC:
+        case LD_A_ABS_DE:
+        case LD_A_ABS_HLI:
+        case LD_A_ABS_HLD:
+            load_abs_r16_mem(dmg, cpu);
             break;
 
         default:
