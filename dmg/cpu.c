@@ -11,79 +11,87 @@
 #include <stdlib.h>
 
 enum Instructions {
-    Instruction_NOP = 0x00,
+    NOP = 0x00,
 
-    Instruction_LD_B_B = 0x40,
-    Instruction_LD_B_C = 0x41,
-    Instruction_LD_B_D = 0x42,
-    Instruction_LD_B_E = 0x43,
-    Instruction_LD_B_H = 0x44,
-    Instruction_LD_B_L = 0x45,
-    Instruction_LD_B_A = 0x47,
+    LD_B_B = 0x40,
+    LD_B_C = 0x41,
+    LD_B_D = 0x42,
+    LD_B_E = 0x43,
+    LD_B_H = 0x44,
+    LD_B_L = 0x45,
+    LD_B_A = 0x47,
 
-    Instruction_LD_C_B = 0x48,
-    Instruction_LD_C_C = 0x49,
-    Instruction_LD_C_D = 0x4A,
-    Instruction_LD_C_E = 0x4B,
-    Instruction_LD_C_H = 0x4C,
-    Instruction_LD_C_L = 0x4D,
-    Instruction_LD_C_A = 0x4F,
+    LD_C_B = 0x48,
+    LD_C_C = 0x49,
+    LD_C_D = 0x4A,
+    LD_C_E = 0x4B,
+    LD_C_H = 0x4C,
+    LD_C_L = 0x4D,
+    LD_C_A = 0x4F,
 
-    Instruction_LD_D_B = 0x50,
-    Instruction_LD_D_C = 0x51,
-    Instruction_LD_D_D = 0x52,
-    Instruction_LD_D_E = 0x53,
-    Instruction_LD_D_H = 0x54,
-    Instruction_LD_D_L = 0x55,
-    Instruction_LD_D_A = 0x57,
+    LD_D_B = 0x50,
+    LD_D_C = 0x51,
+    LD_D_D = 0x52,
+    LD_D_E = 0x53,
+    LD_D_H = 0x54,
+    LD_D_L = 0x55,
+    LD_D_A = 0x57,
 
-    Instruction_LD_E_B = 0x58,
-    Instruction_LD_E_C = 0x59,
-    Instruction_LD_E_D = 0x5A,
-    Instruction_LD_E_E = 0x5B,
-    Instruction_LD_E_H = 0x5C,
-    Instruction_LD_E_L = 0x5D,
-    Instruction_LD_E_A = 0x5F,
+    LD_E_B = 0x58,
+    LD_E_C = 0x59,
+    LD_E_D = 0x5A,
+    LD_E_E = 0x5B,
+    LD_E_H = 0x5C,
+    LD_E_L = 0x5D,
+    LD_E_A = 0x5F,
 
-    Instruction_LD_H_B = 0x60,
-    Instruction_LD_H_C = 0x61,
-    Instruction_LD_H_D = 0x62,
-    Instruction_LD_H_E = 0x63,
-    Instruction_LD_H_H = 0x64,
-    Instruction_LD_H_L = 0x65,
-    Instruction_LD_H_A = 0x67,
+    LD_H_B = 0x60,
+    LD_H_C = 0x61,
+    LD_H_D = 0x62,
+    LD_H_E = 0x63,
+    LD_H_H = 0x64,
+    LD_H_L = 0x65,
+    LD_H_A = 0x67,
 
-    Instruction_LD_L_B = 0x68,
-    Instruction_LD_L_C = 0x69,
-    Instruction_LD_L_D = 0x6A,
-    Instruction_LD_L_E = 0x6B,
-    Instruction_LD_L_H = 0x6C,
-    Instruction_LD_L_L = 0x6D,
-    Instruction_LD_L_A = 0x6F,
+    LD_L_B = 0x68,
+    LD_L_C = 0x69,
+    LD_L_D = 0x6A,
+    LD_L_E = 0x6B,
+    LD_L_H = 0x6C,
+    LD_L_L = 0x6D,
+    LD_L_A = 0x6F,
 
-    Instruction_LD_A_B = 0x78,
-    Instruction_LD_A_C = 0x79,
-    Instruction_LD_A_D = 0x7A,
-    Instruction_LD_A_E = 0x7B,
-    Instruction_LD_A_H = 0x7C,
-    Instruction_LD_A_L = 0x7D,
-    Instruction_LD_A_A = 0x7F,
+    LD_A_B = 0x78,
+    LD_A_C = 0x79,
+    LD_A_D = 0x7A,
+    LD_A_E = 0x7B,
+    LD_A_H = 0x7C,
+    LD_A_L = 0x7D,
+    LD_A_A = 0x7F,
 
-    Instruction_LD_B_HL_INDIRECT = 0x46,
-    Instruction_LD_C_HL_INDIRECT = 0x4E,
-    Instruction_LD_D_HL_INDIRECT = 0x56,
-    Instruction_LD_E_HL_INDIRECT = 0x5E,
-    Instruction_LD_H_HL_INDIRECT = 0x66,
-    Instruction_LD_L_HL_INDIRECT = 0x6E,
-    Instruction_LD_A_HL_INDIRECT = 0x7E,
+    LD_B_HL_INDIRECT = 0x46,
+    LD_C_HL_INDIRECT = 0x4E,
+    LD_D_HL_INDIRECT = 0x56,
+    LD_E_HL_INDIRECT = 0x5E,
+    LD_H_HL_INDIRECT = 0x66,
+    LD_L_HL_INDIRECT = 0x6E,
+    LD_A_HL_INDIRECT = 0x7E,
 
-    Instruction_LD_HL_B_INDIRECT = 0x70,
-    Instruction_LD_HL_C_INDIRECT = 0x71,
-    Instruction_LD_HL_D_INDIRECT = 0x72,
-    Instruction_LD_HL_E_INDIRECT = 0x73,
-    Instruction_LD_HL_H_INDIRECT = 0x74,
-    Instruction_LD_HL_L_INDIRECT = 0x75,
-    Instruction_LD_HL_A_INDIRECT = 0x77,
+    LD_HL_B_INDIRECT = 0x70,
+    LD_HL_C_INDIRECT = 0x71,
+    LD_HL_D_INDIRECT = 0x72,
+    LD_HL_E_INDIRECT = 0x73,
+    LD_HL_H_INDIRECT = 0x74,
+    LD_HL_L_INDIRECT = 0x75,
+    LD_HL_A_INDIRECT = 0x77,
+
+    LD_B_D8 = 0x06,
+    LD_C_D8 = 0x0E,
+    LD_D_D8 = 0x16,
+    LD_E_D8 = 0x1E,
+    LD_H_D8 = 0x26,
+    LD_L_D8 = 0x2E,
+    LD_A_D8 = 0x3E,
 };
 
 struct CPU* dmg_cpu_init(struct DMG* dmg) {
@@ -191,88 +199,119 @@ void load_hl_r8(struct DMG* dmg, struct CPU* cpu) {
     cpu->instruction_step++;
 }
 
+void load_r8_d8(struct DMG* dmg, struct CPU* cpu) {
+    switch (cpu->instruction_step) {
+        case 0:
+            cpu->TMP = dmg_read_u8(dmg, cpu->PC);
+            cpu->PC++;
+        case 1:
+            const auto target = (cpu->IR >> 3) & 0x7;
+            const auto target_register = get_r8(cpu, target);
+
+            *target_register = cpu->TMP;
+            break;
+        default: break;
+    }
+
+    cpu->is_final_step = cpu->instruction_step == 1;
+    cpu->instruction_step++;
+}
+
 void dmg_cpu_process_instruction(struct DMG* dmg, struct CPU* cpu, uint8_t instruction) {
     cpu->total_cycles++;
     switch (instruction) {
-        case Instruction_NOP:
-            cpu->is_final_step = true;
-            break;
-        case Instruction_LD_B_B:
-        case Instruction_LD_B_C:
-        case Instruction_LD_B_D:
-        case Instruction_LD_B_E:
-        case Instruction_LD_B_H:
-        case Instruction_LD_B_L:
-        case Instruction_LD_B_A:
+        case LD_B_B:
+        case LD_B_C:
+        case LD_B_D:
+        case LD_B_E:
+        case LD_B_H:
+        case LD_B_L:
+        case LD_B_A:
 
-        case Instruction_LD_C_B:
-        case Instruction_LD_C_C:
-        case Instruction_LD_C_D:
-        case Instruction_LD_C_E:
-        case Instruction_LD_C_H:
-        case Instruction_LD_C_L:
-        case Instruction_LD_C_A:
+        case LD_C_B:
+        case LD_C_C:
+        case LD_C_D:
+        case LD_C_E:
+        case LD_C_H:
+        case LD_C_L:
+        case LD_C_A:
 
-        case Instruction_LD_D_B:
-        case Instruction_LD_D_C:
-        case Instruction_LD_D_D:
-        case Instruction_LD_D_E:
-        case Instruction_LD_D_H:
-        case Instruction_LD_D_L:
-        case Instruction_LD_D_A:
+        case LD_D_B:
+        case LD_D_C:
+        case LD_D_D:
+        case LD_D_E:
+        case LD_D_H:
+        case LD_D_L:
+        case LD_D_A:
 
-        case Instruction_LD_E_B:
-        case Instruction_LD_E_C:
-        case Instruction_LD_E_D:
-        case Instruction_LD_E_E:
-        case Instruction_LD_E_H:
-        case Instruction_LD_E_L:
-        case Instruction_LD_E_A:
+        case LD_E_B:
+        case LD_E_C:
+        case LD_E_D:
+        case LD_E_E:
+        case LD_E_H:
+        case LD_E_L:
+        case LD_E_A:
 
-        case Instruction_LD_H_B:
-        case Instruction_LD_H_C:
-        case Instruction_LD_H_D:
-        case Instruction_LD_H_E:
-        case Instruction_LD_H_H:
-        case Instruction_LD_H_L:
-        case Instruction_LD_H_A:
+        case LD_H_B:
+        case LD_H_C:
+        case LD_H_D:
+        case LD_H_E:
+        case LD_H_H:
+        case LD_H_L:
+        case LD_H_A:
 
-        case Instruction_LD_L_B:
-        case Instruction_LD_L_C:
-        case Instruction_LD_L_D:
-        case Instruction_LD_L_E:
-        case Instruction_LD_L_H:
-        case Instruction_LD_L_L:
-        case Instruction_LD_L_A:
+        case LD_L_B:
+        case LD_L_C:
+        case LD_L_D:
+        case LD_L_E:
+        case LD_L_H:
+        case LD_L_L:
+        case LD_L_A:
 
-        case Instruction_LD_A_B:
-        case Instruction_LD_A_C:
-        case Instruction_LD_A_D:
-        case Instruction_LD_A_E:
-        case Instruction_LD_A_H:
-        case Instruction_LD_A_L:
-        case Instruction_LD_A_A:
+        case LD_A_B:
+        case LD_A_C:
+        case LD_A_D:
+        case LD_A_E:
+        case LD_A_H:
+        case LD_A_L:
+        case LD_A_A:
             load_r8_r8(dmg, cpu);
             break;
 
-        case Instruction_LD_B_HL_INDIRECT:
-        case Instruction_LD_C_HL_INDIRECT:
-        case Instruction_LD_D_HL_INDIRECT:
-        case Instruction_LD_E_HL_INDIRECT:
-        case Instruction_LD_H_HL_INDIRECT:
-        case Instruction_LD_L_HL_INDIRECT:
-        case Instruction_LD_A_HL_INDIRECT:
+        case LD_B_HL_INDIRECT:
+        case LD_C_HL_INDIRECT:
+        case LD_D_HL_INDIRECT:
+        case LD_E_HL_INDIRECT:
+        case LD_H_HL_INDIRECT:
+        case LD_L_HL_INDIRECT:
+        case LD_A_HL_INDIRECT:
             load_r8_hl(dmg, cpu);
             break;
 
-        case Instruction_LD_HL_B_INDIRECT:
-        case Instruction_LD_HL_C_INDIRECT:
-        case Instruction_LD_HL_D_INDIRECT:
-        case Instruction_LD_HL_E_INDIRECT:
-        case Instruction_LD_HL_H_INDIRECT:
-        case Instruction_LD_HL_L_INDIRECT:
-        case Instruction_LD_HL_A_INDIRECT:
+        case LD_HL_B_INDIRECT:
+        case LD_HL_C_INDIRECT:
+        case LD_HL_D_INDIRECT:
+        case LD_HL_E_INDIRECT:
+        case LD_HL_H_INDIRECT:
+        case LD_HL_L_INDIRECT:
+        case LD_HL_A_INDIRECT:
             load_hl_r8(dmg, cpu);
+            break;
+
+        case LD_B_D8:
+        case LD_C_D8:
+        case LD_D_D8:
+        case LD_E_D8:
+        case LD_H_D8:
+        case LD_L_D8:
+        case LD_A_D8:
+            load_r8_d8(dmg, cpu);
+            break;
+
+
+        default:
+        case NOP:
+            cpu->is_final_step = true;
             break;
     }
 

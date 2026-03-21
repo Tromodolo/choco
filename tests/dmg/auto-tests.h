@@ -150,7 +150,7 @@ void run_auto_tests() {
             success &= dmg->cpu->F == c_final_f->valueint;
             success &= dmg->cpu->H == c_final_h->valueint;
             success &= dmg->cpu->L == c_final_l->valueint;
-            success &= dmg->cpu->PC - 1 == c_final_pc->valueint; // -1 is to handle the fetch on the final M cycle of an instruction
+            success &= (uint16_t)(dmg->cpu->PC - 1) == c_final_pc->valueint; // -1 is to handle the fetch on the final M cycle of an instruction
             success &= dmg->cpu->SP == c_final_sp->valueint;
 
             if (!success)
