@@ -325,6 +325,7 @@ void load_hl_d8(struct DMG* dmg, struct CPU* cpu) {
         case 0:
             cpu->TMP = dmg_cpu_read_u8(dmg, cpu, cpu->PC);
             cpu->PC++;
+            break;
         case 1:
             dmg_cpu_write_u8(dmg, cpu, cpu->HL, cpu->TMP);
             break;
